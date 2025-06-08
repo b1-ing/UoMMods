@@ -32,7 +32,7 @@ export default function Component() {
                             <div className="text-xs text-muted-foreground">2 days ago</div>
                         </div>
                         <div className="text-sm text-muted-foreground">
-                            This is a great product! I've been using it for a week and it's been a game-changer.
+                            This is a great product! I&apos;ve been using it for a week and it&apos;s been a game-changer.
                         </div>
                     </div>
                 </div>
@@ -47,7 +47,7 @@ export default function Component() {
                             <div className="text-xs text-muted-foreground">5 days ago</div>
                         </div>
                         <div className="text-sm text-muted-foreground">
-                            I'm really impressed with the quality and performance of this product. Highly recommended!
+                            I&apos;m really impressed with the quality and performance of this product. Highly recommended!
                         </div>
                     </div>
                 </div>
@@ -62,7 +62,7 @@ export default function Component() {
                             <div className="text-xs text-muted-foreground">1 week ago</div>
                         </div>
                         <div className="text-sm text-muted-foreground">
-                            I've been using this product for a while and it's been consistently reliable. Definitely worth the
+                            I&apos;ve been using this product for a while and it&apos;s been consistently reliable. Definitely worth the
                             investment.
                         </div>
                     </div>

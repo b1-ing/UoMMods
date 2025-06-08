@@ -1,8 +1,5 @@
 "use client";
 import ReactFlow, {
-    Background,
-    Controls,
-    MiniMap,
     useNodesState,
     useEdgesState,
     Position,
@@ -15,11 +12,8 @@ type Props = {
 };
 
 export default function CourseDependencyGraph({ courseCode }: Props) {
-    const course = courses[courseCode];
+    const course = courses[courseCode as keyof typeof courses];
 
-    if (!course) return <p>Course not found</p>;
-
-    // Helper: Generate a node
     const makeMainNode = (code: string, type: string,x:number, y: number, color: string) => ({
 
 
@@ -27,7 +21,7 @@ export default function CourseDependencyGraph({ courseCode }: Props) {
         id: code,
         position: {x, y},
         data: {
-            label: `${code} - ${courses[code]?.title ?? ""}`,
+            label: `${code} - ${courses[code as keyof typeof courses]?.title ?? ""}`,
         },
         style: {
             border: `2px solid ${color}`,
@@ -50,7 +44,7 @@ export default function CourseDependencyGraph({ courseCode }: Props) {
         id: code,
         position: { x, y },
         data: {
-            label: `${code} - ${courses[code]?.title ?? ""} `,
+            label: `${code} - ${courses[code as keyof typeof courses]?.title ?? ""} `,
         },
         style: {
             border: `2px solid ${color}`,
@@ -99,9 +93,17 @@ export default function CourseDependencyGraph({ courseCode }: Props) {
             label: "required by",
         })),
     ];
-
     const [nodesState, , onNodesChange] = useNodesState(nodes);
     const [edgesState, , onEdgesChange] = useEdgesState(edges);
+    if (!course) return <p>Course not found</p>;
+
+
+
+
+    // Helper: Generate a node
+    
+    
+
 
     return (
         <div className="h-[500px] w-full border rounded-lg">

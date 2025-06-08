@@ -1,7 +1,7 @@
 "use client"
 
 import React, {useState} from 'react';
-import {Card, CardContent, CardHeader, CardTitle} from '@/components/ui/card'
+import {Card, CardContent, CardTitle} from '@/components/ui/card'
 import {
     Drawer,
     DrawerContent,
@@ -17,9 +17,7 @@ import {
     DialogDescription,
     DialogHeader,
     DialogTitle,
-    DialogTrigger,
-    DialogFooter,
-    DialogClose
+
 } from "@/components/ui/dialog"
 import CourseDependencyGraph from "@/app/components/CourseDependencyGraphMini";
 import {Course, courses} from "@/lib/mockcourses"
@@ -49,17 +47,7 @@ export default function Planner() {
 
 
 
-    const addCourseToColumn = (course: {
-        prerequisitesList: string;
-        requiredBy: string[];
-        code: string;
-        description: string;
-        workload: string;
-        units: number;
-        title: string;
-        faculty: string
-        ;
-    }, column: ColumnType) => {
+    const addCourseToColumn = (course: Course, column: ColumnType) => {
         setColumns(prev => {
             const updated = {
                 ...prev,
@@ -92,7 +80,7 @@ export default function Planner() {
 
 
     const addCompulsoryCourses = () => {
-        const program = programs[selectedProgramCode]
+        const program = programs[selectedProgramCode as keyof typeof programs]
         if (!program || !selectedYear) return
 
         const newColumns: Record<ColumnType, Course[]> = {
@@ -129,8 +117,8 @@ export default function Planner() {
 
 
     type PlannerProps = {
-        prerequisites: string
-        corequisites: string
+        prerequisites: string | undefined
+        corequisites: string| undefined
         columns: Record<ColumnType, Course[]>
     }
     function courseExistsInColumns(code: string, columns: Record<ColumnType, Course[]>): boolean {
@@ -145,8 +133,9 @@ export default function Planner() {
                                       corequisites,
                                       columns,
                                   }: PlannerProps)=> {
-        const prereqList = splitCourseCodes(prerequisites)
-        const coreqList = splitCourseCodes(corequisites)
+
+        const prereqList = prerequisites? splitCourseCodes(prerequisites):[]
+        const coreqList = corequisites? splitCourseCodes(corequisites):[]
 
         return (
             <div className="space-y-4">
@@ -155,7 +144,6 @@ export default function Planner() {
                         <h4 className="font-semibold mb-1">Prerequisites:</h4>
                         <div className="flex flex-wrap gap-2">
                             {prereqList.map(code => {
-                                const exists = courseExistsInColumns(code, columns)
                                 return (
                                     <Button
                                         key={code}
@@ -192,6 +180,26 @@ export default function Planner() {
             </div>
         )
     }
+
+    const getFilteredCourses = (type: string) => {
+        switch (type) {
+            case 'sem1':
+                return Object.values(courses).filter(course =>
+                    course.semesters?.includes('Semester 1')
+                );
+            case 'sem2':
+                return Object.values(courses).filter(course =>
+                    course.semesters?.includes('Semester 2')
+                );
+            case 'year':
+            default:
+                return Object.values(courses);
+        }
+    };
+
+
+
+
 
 
     const renderColumn = (label: string, type: ColumnType) => (
@@ -244,7 +252,7 @@ export default function Planner() {
                     <div className="flex-1 overflow-y-auto px-4">
                         <ScrollArea className="h-full">
                             <div className="space-y-2 pb-4">
-                                {Object.values(courses).map(course => (
+                                {getFilteredCourses(type).map(course => (
                                     <Card
                                         key={course.code}
                                         className="p-2 cursor-pointer hover:bg-muted"
@@ -265,6 +273,7 @@ export default function Planner() {
                                         )}
                                     </Card>
                                 ))}
+
                             </div>
                         </ScrollArea>
                     </div>

@@ -1,17 +1,8 @@
 "use client"
-import { usePathname, useParams } from 'next/navigation'
-import { Button } from "@/components/ui/button"
+import { useParams } from 'next/navigation'
 import { courses } from "@/lib/mockcourses";
 import CourseDependencyGraph from "@/app/components/CourseDependencyGraph";
-import {
-    Card,
-    CardAction,
-    CardContent,
-    CardDescription,
-    CardFooter,
-    CardHeader,
-    CardTitle,
-} from "@/components/ui/card"
+
 import WorkloadChart from "@/app/components/WorkloadChart"
 import Component from "@/app/components/Comments"
 import GradeChart from "@/app/components/GradeChart"
@@ -22,11 +13,11 @@ const gradeStats = [
 ];
 
 
-export default function DynamicRoute() {
-    const pathname = usePathname()
-    const params = useParams()
-    let code = (params.data as string)?.toUpperCase()
-    let course = courses[code]
+
+
+export default async function Page({ params }: { params: { data: string } }) {
+    const code = (params.data as string)?.toUpperCase()
+    const course = courses[code]
 
 
 
@@ -47,8 +38,8 @@ export default function DynamicRoute() {
             <p className="text-m text-muted-foreground mt-2">{course.description}</p>
 
 
-            <WorkloadChart courseName={course.title} Lecture={course.lecture} Placement={course.placement}
-                           Study={course.study} Workshops={course.workshops}/>
+            <WorkloadChart Lectures={course.Lectures} Placement={course.Placement}
+                           Study={course.Study} Workshops={course.Workshops} Labs={course.Lab}/>
             <h2 className="text-xl font-semibold">Historical Grade Statistics</h2>
             <GradeChart data={gradeStats} />
             <h2 className="text-xl font-semibold">Course Dependency Graph</h2>

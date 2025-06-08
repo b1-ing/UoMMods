@@ -1,8 +1,5 @@
 "use client";
 import ReactFlow, {
-    Background,
-    Controls,
-    MiniMap,
     useNodesState,
     useEdgesState,
     Position,
@@ -15,11 +12,8 @@ type Props = {
 };
 
 export default function CourseDependencyGraph({ courseCode }: Props) {
-    const course = courses[courseCode];
+    const course = courses[courseCode as keyof typeof courses];
 
-    if (!course) return <p>Course not found</p>;
-
-    // Helper: Generate a node
     const makeMainNode = (code: string, type: string,x:number, y: number, color: string) => ({
 
 
@@ -27,7 +21,7 @@ export default function CourseDependencyGraph({ courseCode }: Props) {
         id: code,
         position: {x, y},
         data: {
-            label: `${code} - ${courses[code]?.title ?? ""}`,
+            label: `${code} - ${courses[code as keyof typeof courses]?.title ?? ""}`,
         },
         style: {
             border: `2px solid ${color}`,
@@ -50,7 +44,7 @@ export default function CourseDependencyGraph({ courseCode }: Props) {
         id: code,
         position: { x, y },
         data: {
-            label: `${code} - ${courses[code]?.title ?? ""} `,
+            label: `${code} - ${courses[code as keyof typeof courses]?.title ?? ""} `,
         },
         style: {
             border: `2px solid ${color}`,
@@ -64,47 +58,55 @@ export default function CourseDependencyGraph({ courseCode }: Props) {
     });
     // Nodes: central + related
     const nodes = [
-        makeMainNode(courseCode, "Main",50, 0, "#2563eb"), // Blue
+        makeMainNode(courseCode, "Main",0, 0, "#2563eb"), // Blue
 
-        ...(course.prerequisitesList ?? []).map((pr, i) =>
-            makeNode(pr, "Prerequisite",-250, 50 * i -200, "#10b981") // Green
+        ...(course.prerequisitesList?.split(",").map(s => s.trim()) ?? []).map((pr, i) =>
+            makeNode(pr, "Prerequisite",-400, 50 * i, "#10b981") // Green
         ),
 
-        ...(course.corequisite ?? []).map((co, i) =>
-            makeMainNode(co, "Corequisite",50, 50 * (i+1), "#f59e0b") // Yellow
+        ...(course.corequisitesList?.split(",").map(s => s.trim()) ?? []).map((co, i) =>
+            makeMainNode(co, "Corequisite",0, 50 * (i+1), "#f59e0b") // Yellow
         ),
 
-        ...(course.requiredBy ?? []).map((rb, i) =>
-            makeNode(rb, "Required By", 350, 50 * i +100, "#ef4444") // Red
+        ...(course.requiredBy?.split(",").map(s => s.trim()) ?? []).map((rb, i) =>
+            makeNode(rb, "Required By", 400, 50 * i, "#ef4444") // Red
         ),
     ];
 
     const edges = [
-        ...(course.prerequisitesList ?? []).map((pr) => ({
+        ...(course.prerequisitesList?.split(",").map(s => s.trim()) ?? []).map((pr) => ({
             id: `pr-${pr}`,
             source: pr,
             target: courseCode,
             label: "prerequisite of",
         })),
-        ...(course.corequisite ?? []).map((co) => ({
+        ...(course.corequisitesList?.split(",").map(s => s.trim()) ?? []).map((co) => ({
             id: `co-${co}`,
             source: courseCode,
             target: co,
             label: "corequisite of",
         })),
-        ...(course.requiredBy ?? []).map((rb) => ({
+        ...(course.requiredBy?.split(",").map(s => s.trim()) ?? []).map((rb) => ({
             id: `rb-${rb}`,
             source: courseCode,
             target: rb,
             label: "required by",
         })),
     ];
-
     const [nodesState, , onNodesChange] = useNodesState(nodes);
     const [edgesState, , onEdgesChange] = useEdgesState(edges);
+    if (!course) return <p>Course not found</p>;
+
+
+
+
+    // Helper: Generate a node
+    
+    
+
 
     return (
-        <div className="h-[400px] w-full border rounded-lg">
+        <div className="h-[500px] w-full border rounded-lg">
             <ReactFlow
                 nodes={nodesState}
                 edges={edgesState}

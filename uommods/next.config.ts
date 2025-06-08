@@ -1,8 +1,6 @@
 import type { NextConfig } from "next";
 
 const config = {
-    plugins: {
-        "@tailwindcss/postcss": {},
-    },
+    reactStrictMode: true,
 };
 export default config;

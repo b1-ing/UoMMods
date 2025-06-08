@@ -1,5 +1,5 @@
-"use client"
-import { useParams } from 'next/navigation'
+
+
 import { courses } from "@/lib/mockcourses";
 import CourseDependencyGraph from "@/app/components/CourseDependencyGraph";
 
@@ -15,8 +15,15 @@ const gradeStats = [
 
 
 
-export default async function Page({ params }: { params: { data: string } }) {
-    const code = (params.data as string)?.toUpperCase()
+
+const Page = async({
+                                       params,
+                                   }: {
+    params: Promise<{ data: string }>;
+
+}) => {
+    const resolvedParams = await params;
+    const code = (resolvedParams.data as string)?.toUpperCase()
     const course = courses[code]
 
 
@@ -48,4 +55,9 @@ export default async function Page({ params }: { params: { data: string } }) {
             </div>
         </div>
     )
+
+
 }
+
+
+export default Page;

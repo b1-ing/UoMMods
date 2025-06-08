@@ -213,9 +213,9 @@ export default function Planner() {
 
             <CardContent className="space-y-2 p-2">
                 {columns[type].map(course => (
-                    <Card key={`${type}-${course.code}`} className="p-2" onClick={()=>setDialogCourse(course)}>
+                    <Card key={`${type}-${course.code? course.code:"not found"}`} className="p-2" onClick={()=>setDialogCourse(course)}>
                         <div className="flex justify-between items-start">
-                        <div className="font-semibold">{course.code} - {course.title}</div>
+                        <div className="font-semibold">{course.code? course.code:"not found"} - {course.title}</div>
                             <div>
                                 <Button
                                     variant="ghost"

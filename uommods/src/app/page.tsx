@@ -1,103 +1,63 @@
-import Image from "next/image";
-
-export default function Home() {
+import HeaderBar from "@/app/components/HeaderBar";
+export default function LandingPage() {
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+      <main className="min-h-screen bg-gradient-to-b from-white to-slate-100 text-gray-800">
+        <HeaderBar />
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
+          <section className="max-w-5xl mx-auto px-6 py-20 text-center">
+              <h2 className="text-4xl font-extrabold tracking-tight mb-4">Plan your course modules with confidence</h2>
+              <p className="text-lg text-gray-600 mb-10">
+                  UoMMods helps you explore, compare, and plan your university modules — with visual workload charts,
+                  prerequisite graphs, and grade history.
+              </p>
+              <img src="/planner.png" alt="App preview" className="rounded-lg shadow-lg mx-auto w-full max-w-3xl"/>
+              <a href="/course-planner" className="space-y-8 px-4 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 transition">
+                  Launch Planner
+              </a>
+          </section>
+
+
+          <section className="bg-white py-16">
+              <div className="max-w-6xl mx-auto px-6 grid md:grid-cols-3 gap-12 text-left">
+            <FeatureCard
+                title="Interactive Workload Charts"
+                description="Easily compare lectures, labs, study hours, and placements with our clean visual breakdown."
+                icon="📊"
             />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
+            <FeatureCard
+                title="Grade Insights"
+                description="View historical grade distributions to get a sense of how past cohorts performed."
+                icon="🎓"
+            />
+            <FeatureCard
+                title="Dependency Graphs"
+                description="Understand module prerequisites and postrequisites visually with automatic course maps."
+                icon="🔗"
+            />
+          </div>
+        </section>
+
+        <footer className="text-center py-8 text-sm text-gray-500">
+          © {new Date().getFullYear()} UoMMods. Built by Brendan Ling
+        </footer>
       </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+  );
+}
+
+function FeatureCard({
+                       title,
+                       description,
+                       icon,
+                     }: {
+  title: string;
+  description: string;
+  icon: string;
+}) {
+  return (
+      <div className="bg-slate-50 p-6 rounded-lg shadow-sm hover:shadow-md transition">
+        <div className="text-3xl mb-4">{icon}</div>
+        <h3 className="text-xl font-semibold mb-2">{title}</h3>
+        <p className="text-gray-600">{description}</p>
+      </div>
   );
 }

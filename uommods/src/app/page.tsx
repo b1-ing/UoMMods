@@ -38,7 +38,7 @@ export default function LandingPage() {
         </section>
 
         <footer className="text-center py-8 text-sm text-gray-500">
-          © {new Date().getFullYear()} UoMMods. Built by Brendan Ling
+          © {new Date().getFullYear()} Brendan Ling
         </footer>
       </main>
   );

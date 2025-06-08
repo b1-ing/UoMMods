@@ -31,7 +31,8 @@ const Page = async({
 
 
     return (
-        <div className="w-full mx-auto p-6 space-y-6">
+        <div className="min-h-screen bg-gradient-to-b from-white to-slate-100 text-gray-800">
+
             <header>
                 <HeaderBar />
             </header>

@@ -36,8 +36,10 @@ export const courses: Record<string, Course> = {
         level: 2,
         faculty: "Computer Science • Computing",
         semesters: "Semester 2",
-        description: "The world is filling up with data... [truncated]",
-        aims: "The unit aims to introduce the essential concepts... [truncated]",
+        description: "The world is filling up with data - billions of images online, billions of supermarket transactions, billions of events pouring out of our everyday lives.   Machine Learning is about designing algorithms capable of automatically learning patterns from this supplied data. Examples of this are in online shopping like Amazon.com - which learns what products you like to buy, or in spam detection systems, which learn what spam looks like as you tag it in your spam folder.\n" +
+            " \n" +
+            "In this course unit we will introduce you to the basics of these algorithms, implementing a basic spam filter and a handwriting recognition engine.",
+
         exam: 0.7,
         coursework: 0.3,
         Lectures: 2,
@@ -61,8 +63,7 @@ export const courses: Record<string, Course> = {
         level: 2,
         faculty: "Computer Science • Computing",
         semesters: "Semester 1",
-        description: "This is a unique course developed... [truncated]",
-        aims: "This course intends to build an understanding... [truncated]",
+        description: "This is a unique course developed at the University of Manchester. It explains how implementations of logic can be used to solve a number a number of problems, such as solving hardest Sudoku puzzles in no time, analysing two-player games, or finding serious errors in computer systems",
         exam: 0.7,
         coursework: 0.3,
         Lectures: 2,
@@ -79,8 +80,7 @@ export const courses: Record<string, Course> = {
         level: 2,
         faculty: "Computer Science • Computing",
         semesters: "Semester 1",
-        description: "This course unit aims to reinforce... [truncated]",
-        aims: "The unit aims to build upon the concepts... [truncated]",
+        description: "This course unit aims to reinforce and extend digital hardware development skills which are introduced in the first year. It employs industry-standard tools and languages which are used worldwide for silicon development. The UK has perhaps the strongest expertise in Europe in these areas and skills are in high demand from employers such as ARM and Imagination Technologies who provide much of the digital design for devices such as smartphones and tablet computers.",
         exam: 0.5,
         coursework: 0.5,
         Lectures: 2,
@@ -98,7 +98,7 @@ export const courses: Record<string, Course> = {
         level: 2,
         faculty: "Computer Science • Computing",
         semesters: "Semester 1",
-        description: "This course provides a comprehensive exploration... [truncated]",
+        description: "This course provides a comprehensive exploration of databases, emphasizing their pivotal role in modern computing and data management. Students will learn the principles of database design, implementation, and management, with a focus on the relational model, SQL, and normalization. The curriculum also covers database integration with web and front-end systems, transaction management, security, and emerging paradigms like NoSQL. By blending theory with hands-on practice, students will develop essential skills in designing robust databases, writing advanced queries, and leveraging database technologies for real-world applications.",
         exam: 0.3,
         coursework: 0.7,
         Lectures: 0,
@@ -115,7 +115,7 @@ export const courses: Record<string, Course> = {
         level: 2,
         faculty: "Computer Science • Computing",
         semesters: "Semester 1",
-        description: "The Unit aims to make students familiar... [truncated]",
+        description: "The Unit aims to make students familiar with the basic concepts and techniques of Artificial Intelligence. It provides the knowledge and understanding that underpins later course units in the subject taught in the Department.",
         exam: 0.8,
         coursework: 0.2,
         Lectures: 2,
@@ -133,7 +133,10 @@ export const courses: Record<string, Course> = {
         level: 2,
         faculty: "Computer Science • Computing",
         semesters: "Semester 2",
-        description: "This course prepares you to build interactive... [truncated]",
+        description: "This course prepares you to build interactive, real-world web applications using modern development frameworks and team-based agile practices. You will work in a simulated software company, with weekly requirements from ‘customers’ (your lecturers) that range from precise to deliberately ambiguous – just like the real world.\n" +
+            "\n" +
+            "Working in teams, you will learn to break down requirements, clarify ambiguity through customer engagement, and deliver high-quality software through continuous integration and testing. Along the way, you will develop fluency in an industry-standard framework, navigating documentation and architectural patterns to solve evolving challenges.",
+
         exam: 0.5,
         coursework: 0.5,
         Lectures: 1,

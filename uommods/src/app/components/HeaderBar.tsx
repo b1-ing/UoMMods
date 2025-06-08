@@ -7,26 +7,48 @@ import { useState, useEffect } from "react"
 export default function HeaderBar() {
     const [sidebarOpen, setSidebarOpen] = useState(false)
     const [currentDate, setCurrentDate] = useState("")
+    const [currentTime, setCurrentTime] = useState("")
     const [academicWeek, setAcademicWeek] = useState("")
 
     useEffect(() => {
-        const date = new Date()
-        const options: Intl.DateTimeFormatOptions = {
-            weekday: "short", year: "numeric", month: "short", day: "numeric",
-        }
-        setCurrentDate(date.toLocaleDateString(undefined, options))
+        const updateDateTime = () => {
+            const date = new Date()
 
-        const termStart = new Date("2025-09-16")
-        const weekNum = Math.ceil((+date - +termStart) / (7 * 24 * 60 * 60 * 1000)) + 1
-        setAcademicWeek(`Week ${weekNum > 0 ? weekNum : 0}`)
+            const dateOptions: Intl.DateTimeFormatOptions = {
+                weekday: "short",
+                year: "numeric",
+                month: "short",
+                day: "numeric",
+            }
+
+            const timeOptions: Intl.DateTimeFormatOptions = {
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
+                hour12: false,
+            }
+
+            setCurrentDate(date.toLocaleDateString(undefined, dateOptions))
+            setCurrentTime(date.toLocaleTimeString(undefined, timeOptions))
+
+            const termStart = new Date("2024-09-16")
+            const weekNum = Math.ceil((+date - +termStart) / (7 * 24 * 60 * 60 * 1000)) + 1
+            setAcademicWeek(`Week ${weekNum > 0 ? weekNum : 0}`)
+        }
+
+        updateDateTime() // Set initially
+        const interval = setInterval(updateDateTime, 1000) // Update every second
+
+        return () => clearInterval(interval) // Cleanup
     }, [])
+
 
     return (
         <>
             <header className="sticky top-0 z-50 w-full border-b bg-white/90 backdrop-blur-md shadow-sm">
                 <div className="container mx-auto px-4 py-3 flex items-center justify-between">
                     {/* Logo */}
-                    <Link href="/" className="text-xl font-bold text-blue-600">UoMMods</Link>
+                    <Link href="/" className="text-xl font-bold text-black-600 hover:text-blue-600">UoMMods</Link>
 
                     {/* Desktop Nav */}
                     <nav className="hidden md:flex space-x-6 text-sm text-gray-700 font-medium">
@@ -36,7 +58,7 @@ export default function HeaderBar() {
 
                     {/* Date + Week */}
                     <div className="hidden sm:block text-sm text-right text-gray-600">
-                        <div>{currentDate}</div>
+                        <div>{currentDate}  {currentTime}</div>
                         <div className="text-xs text-gray-500">{academicWeek}</div>
                     </div>
 

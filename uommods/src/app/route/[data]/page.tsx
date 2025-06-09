@@ -7,10 +7,8 @@ import WorkloadChart from "@/app/components/WorkloadChart"
 import Component from "@/app/components/Comments"
 import GradeChart from "@/app/components/GradeChart"
 import HeaderBar from "@/app/components/HeaderBar";
-const gradeStats = [
-    { year: '2022', mean: 68, stdDev: 5, n: 120 },
-    { year: '2023', mean: 72, stdDev: 6, n: 130 }
-];
+
+import AssessmentSplit from "@/app/components/AssessmentSplit";
 
 
 
@@ -37,22 +35,24 @@ const Page = async({
                 <HeaderBar />
             </header>
             <div className="max-w-6xl mx-auto p-6 space-y-6">
-            <h1 className="text-3xl font-bold">{course.code}</h1>
-            <h1 className="text-3xl font-bold">{course.title}</h1>
-            <p className="text-muted-foreground">{course.faculty} - {course.units} Units</p>
-            <p>Offered in: {course.semesters}</p>
+                <h1 className="text-3xl font-bold">{course.code}</h1>
+                <h1 className="text-3xl font-bold">{course.title}</h1>
+                <p className="text-muted-foreground">{course.faculty} - {course.units} Units</p>
+                <p>Offered in: {course.semesters}</p>
 
-            <h2 className="font-semibold text-lg">Description</h2>
-            <p className="text-m text-muted-foreground mt-2">{course.description}</p>
+                <h2 className="font-semibold text-lg">Description</h2>
+                <p className="text-m text-muted-foreground mt-2">{course.description}</p>
 
 
-            <WorkloadChart Lectures={course.Lectures} Placement={course.Placement}
-                           Study={course.Study} Workshops={course.Workshops} Labs={course.Lab}/>
-            <h2 className="text-xl font-semibold">Historical Grade Statistics</h2>
-            <GradeChart data={gradeStats} />
-            <h2 className="text-xl font-semibold">Course Dependency Graph</h2>
-            <CourseDependencyGraph courseCode={course.code}/>
-            <Component/>
+                <WorkloadChart Lectures={course.Lectures} Placement={course.Placement}
+                               Study={course.Study} Workshops={course.Workshops} Labs={course.Lab}/>
+                <h2 className="text-xl font-semibold">Assessment weightage</h2>
+                <AssessmentSplit exam={course.exam} coursework={course.coursework}/>
+                <h2 className="text-xl font-semibold">Historical Grade Statistics</h2>
+                <GradeChart data={course.gradestats} overallMean={course.overallmean}/>
+                <h2 className="text-xl font-semibold">Course Dependency Graph</h2>
+                <CourseDependencyGraph courseCode={course.code}/>
+                <Component/>
             </div>
         </div>
     )

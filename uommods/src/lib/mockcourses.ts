@@ -15,7 +15,7 @@ export type Course =  {
     coursework: number,
     Study: number,
     Lectures: number,
-    Workshops: number,
+    Workshops?: number,
     Placement?: number,
     Lab? : number;
     corequisitesList?: string;       // 👈 NEW
@@ -23,7 +23,9 @@ export type Course =  {
     requiredBy?: string;        // 👈 NEW (course code
     locations?: string[];
     prereqnotes?: string;
+    gradestats? : {     year: string;   mean: number;     stdDev: number;     n: number }[];
     timetable?: { type: string; location: string; weeks: string }[];
+    overallmean: number;
 }
 
 
@@ -53,7 +55,13 @@ export const courses: Record<string, Course> = {
         timetable: [
             { type: "LAB [06]", location: "COM1-B113", weeks: "Weeks 3-13" },
             { type: "TUT [10]", location: "AS6-020607", weeks: "Weeks 3-13" }
-        ]
+        ],
+        gradestats:[
+            { year: '2022', mean: 68, stdDev: 5, n: 120 },
+            { year: '2023', mean: 72, stdDev: 6, n: 130 }
+        ],
+        overallmean: 61.7,
+
     },
 
     COMP21111: {
@@ -70,7 +78,14 @@ export const courses: Record<string, Course> = {
         Workshops: 1,
         Study: 6,
         Placement: 0,
-        prerequisitesList: "COMP11120, MATH11022, MATH11121"
+        prerequisitesList: "COMP11120, MATH11022, MATH11121",
+        gradestats:[
+            { year: '24/25', mean: 64.9, stdDev: 17.4, n: 161 },
+            { year: '23/24', mean: 70.9, stdDev: 17.6, n: 160 },
+            { year: '22/23', mean: 71.5, stdDev: 16.4, n: 301 },
+            { year: '21/22', mean: 69.4, stdDev: 17.5, n: 177 },
+        ],
+        overallmean: 61.7,
     },
 
     COMP22111: {
@@ -88,7 +103,14 @@ export const courses: Record<string, Course> = {
         Study: 6,
         Placement: 0,
         prerequisitesList: "COMP12111",
-        requiredBy: "COMP32211"
+        requiredBy: "COMP32211",
+        gradestats:[
+            { year: '24/25', mean: 72.3, stdDev:10.8 , n: 62 },
+            { year: '23/24', mean: 61.8, stdDev: 20.4, n: 49 },
+            { year: '22/23', mean: 68.1, stdDev: 18.6, n: 136 },
+            { year: '21/22', mean: 67.6, stdDev: 17.3, n: 115 },
+        ],
+        overallmean: 61.7,
     },
 
     COMP23111: {
@@ -105,7 +127,14 @@ export const courses: Record<string, Course> = {
         Workshops: 1,
         Study: 6,
         Placement: 0,
-        requiredBy: "COMP38311"
+        requiredBy: "COMP38311",
+        gradestats:[
+            { year: '24/25', mean: 72.3, stdDev:10.8 , n: 62 },
+            { year: '23/24', mean: 61.8, stdDev: 20.4, n: 49 },
+            { year: '22/23', mean: 68.1, stdDev: 18.6, n: 136 },
+            { year: '21/22', mean: 67.6, stdDev: 17.3, n: 115 },
+        ],
+        overallmean: 61.7,
     },
 
     COMP24011: {
@@ -123,8 +152,107 @@ export const courses: Record<string, Course> = {
         Study: 6,
         Placement: 0,
         Lab: 1,
-        requiredBy: "COMP24112,COMP24412"
+        requiredBy: "COMP24112,COMP24412",
+        overallmean: 61.7,
     },
+    COMP24412: {
+        code: "COMP24412",
+        title: "Knowledge Based AI",
+        units: 10,
+        level: 2,
+        faculty: "Computer Science • Computing",
+        semesters: "Semester 2",
+        description: "Intelligent systems need to be able to represent and reason about the world. This course provides an introduction to the key ideas in knowledge representation and different types of automated reasoning. The course is a mixture of theoretical and practical work: at the end of the course students will know the principles that such systems use, and they will have experience of implementing those principles in running systems.",
+        exam: 0.7,
+        coursework: 0.3,
+        Lectures: 1,
+        Study: 7,
+        Placement: 0,
+        Lab: 1,
+        corequisitesList: "COMP24011",
+        overallmean: 61.7,
+    },
+
+    COMP25212: {
+        code: "COMP25212",
+        title: "System Architecture",
+        units: 10,
+        level: 2,
+        faculty: "Computer Science • Computing",
+        semesters: "Semester 2",
+        description: "The basic architecture of computer systems has been covered in first year course units which detailed both the instruction set architecture and the micro-architecture (hardware structure) of simple processors. Although these principles underlie the vast majority of modern computers, there is a wide range of both hardware and software techniques which are employed to increase the performance, reliability and flexibility of systems.",
+        exam: 0.7,
+        coursework: 0.3,
+        Lectures: 2,
+        Workshops: 1,
+        Study: 6,
+        Placement: 0,
+        Lab: 1,
+        prerequisitesList: "COMP15111",
+        requiredBy: "COMP35112",
+        overallmean: 61.7,
+    },
+
+    COMP27112: {
+        code: "COMP27112",
+        title: "Introduction to Visual Computing",
+        units: 10,
+        level: 2,
+        faculty: "Computer Science • Computing",
+        semesters: "Semester 2",
+        description: "Visual Computing brings together two fundamentally important aspects of modern computing: Computer Graphics - concerned with the synthesis of images from computer models - and Image Processing, which deals with analysis and understanding of images by computers. There are now considerable overlaps between these two, traditionally separate, fields of research and their applications.\n" +
+            "The Visual Computing theme consists of the following course units:\n" +
+            "• Year 2: Computer Graphics and Image Processing (10 credits)\n" +
+            "• Year 3: Advanced Computer Graphics (10 credits)\n" +
+            "• Year 3: Computer Vision (10 credits)",
+        exam: 0.7,
+        coursework: 0.3,
+        Lectures: 2,
+        Lab: 1,
+        Study: 6,
+        Placement: 0,
+        prerequisitesList: "COMP15111",
+        requiredBy: "COMP37111,COMP37212",
+        overallmean: 61.7,
+    },
+
+    COMP28112: {
+        code: "COMP28112",
+        title: "Distributed Systems",
+        units: 10,
+        level: 2,
+        faculty: "Computer Science • Computing",
+        semesters: "Semester 2",
+        description: "The course unit assumes that students already have a solid understanding of the main principles of computing within a single machine, have a basic understanding of the issues related to machine communication and networking, and have a notion of what distributed computing is. The syllabus will contain topics covering the fundamentals of distributed computing, its application in modern systems and issues to be considered when designing distributed systems.",
+        exam: 0.5,
+        coursework: 0.5,
+        Lectures: 2,
+        Workshops: 1,
+        Study: 6,
+        Placement: 0,
+        prerequisitesList: "COMP15212, COMP16412",
+        requiredBy: "COMP38311,COMP32412,COMP38412",
+        overallmean: 61.7,
+    },
+
+    COMP22712: {
+        code: "COMP22712",
+        title: "Microcontrollers",
+        units: 10,
+        level: 2,
+        faculty: "Computer Science • Computing",
+        semesters: "Semester 2",
+        description: "The module is a strong practical reinforcement of the software/hardware interface.  It provides experience in hardware/software codesign as well as dealing with interfacing techniques, from 'bit fiddling' to interrupt routines.  There is also an underpinning of operating systems and their implications in machine architecture.  The module uses custom designed hardware and software tools developed locally for this specific purpose.",
+        exam: 1.0,
+        coursework: 0,
+        Lectures: 0,
+        Lab: 2,
+        Study: 7,
+        Placement: 0,
+        prerequisitesList: "COMP15111",
+        overallmean: 61.7,
+    },
+
 
     COMP23412: {
         code: "COMP23412",
@@ -143,7 +271,8 @@ export const courses: Record<string, Course> = {
         Workshops: 2,
         Study: 5,
         Placement: 0,
-        prerequisitesList: "COMP23311"
+        prerequisitesList: "COMP23311",
+        overallmean: 61.7,
     },
 
     COMP23311: {
@@ -166,6 +295,8 @@ export const courses: Record<string, Course> = {
         timetable: [
             { type: "LAB [06]", location: "COM1-B113", weeks: "Weeks 3-13" },
             { type: "TUT [10]", location: "AS6-020607", weeks: "Weeks 3-13" }
-        ]
+        ],
+        overallmean: 61.7,
+
     }
 };

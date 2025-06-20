@@ -1,6 +1,6 @@
 "use client"
 
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {Card, CardContent, CardTitle} from '@/components/ui/card'
 import {
     Drawer,
@@ -22,11 +22,9 @@ import {
 import CourseDependencyGraph from "@/app/components/CourseDependencyGraphMini";
 import {Course, courses} from "@/lib/mockcourses"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import {
-    Tooltip,
-    TooltipContent,
-    TooltipTrigger,
-} from "@/components/ui/tooltip"
+import {PrereqDisplay} from "@/app/components/PrereqDisplay";
+import GradeChart from "@/app/components/GradeChart";
+import Link from "next/link";
 
 
 type ColumnType = 'year' | 'sem1' | 'sem2'
@@ -97,6 +95,13 @@ export default function Planner() {
         setOpenDrawer(null)
     }
 
+    useEffect(() => {
+        if (selectedProgramCode && selectedYear) {
+            addCompulsoryCourses();
+        }
+    }, [selectedProgramCode, selectedYear]);
+
+
     const removeCourseFromColumn = (course: Course, column: ColumnType) => {
         setColumns(prev => {
             const updated = {
@@ -112,6 +117,11 @@ export default function Planner() {
     function splitCourseCodes(codes: string): string[] {
         console.log(codes)
         return codes.split(',')
+    }
+    function courseExistsInColumns(code: string, columns: Record<ColumnType, Course[]>): boolean {
+        return Object.values(columns).some(column =>
+            column.some(course => course?.code === code)
+        );
     }
 
 
@@ -159,96 +169,30 @@ export default function Planner() {
         corequisites: string| undefined
         columns: Record<ColumnType, Course[]>
     }
-    function courseExistsInColumns(code: string, columns: Record<ColumnType, Course[]>): boolean {
-        return Object.values(columns).some(column =>
-            column.some(course => course?.code === code)
-        );
-    }
-
-    const PrereqDisplay = ({
-                                      prerequisites,
-                                      corequisites,
-                                      columns,
-                                  }: PlannerProps)=> {
-
-        const prereqList = prerequisites? splitCourseCodes(prerequisites):[]
-        const coreqList = corequisites? splitCourseCodes(corequisites):[]
-
-        return (
-            <div className="space-y-4">
-                {prereqList.length > 0 && (
-                    <div>
-                        <h4 className="font-semibold mb-1 ">Prerequisites:</h4>
-                        <div className="flex flex-wrap gap-2">
-                            {prereqList.map(code => {
-                                return (
-                                    <Button
-                                        key={code}
-                                        variant="outline"
-                                        className={""}
-                                    >
-                                        {code}
-                                    </Button>
-                                )
-                            })}
-                        </div>
-                    </div>
-                )}
-
-                {coreqList.length > 0 && (
-                    <div>
-                        <h4 className="font-semibold mb-1">Corequisites:</h4>
-                        <div className="flex flex-wrap gap-2">
-                            {coreqList.map(code => {
-                                const exists = courseExistsInColumns(code, columns)
-                                return !exists ? (
-                                    <Tooltip>
-                                            <TooltipTrigger><Button
-                                                key={code}
-                                                variant="outline"
-                                                className={"border-red-500 text-red-600"}
-                                            >
-                                                {code}
-                                            </Button>
-                                            </TooltipTrigger>
-                                                <TooltipContent>
-                                                    <p>Corequisite not met</p>
-                                                </TooltipContent>
-                                    </Tooltip> )
-                                    :(
-                                            <Button
-                                                key={code}
-                                                variant="outline"
-                                            >
-                                                {code}
-                                            </Button>
-                                    )
-
-                                    }
 
 
-                                )
-                            }
-                        </div>
-                    </div>
-                )}
-            </div>
-        )
-    }
+
 
     const getFilteredCourses = (type: string) => {
+        if(!selectedProgramCode || !selectedYear){
+
+            return [];
+        }
+
+
+
         switch (type) {
             case 'sem1':
                 return Object.values(courses).filter(course =>
-                    course.semesters?.includes('Semester 1')
+                    course.semesters?.includes('Semester 1') && course.level == selectedYear
                 );
             case 'sem2':
                 return Object.values(courses).filter(course =>
-                    course.semesters?.includes('Semester 2')
+                    course.semesters?.includes('Semester 2')&& course.level == selectedYear
                 );
             case 'year':
                 return Object.values(courses).filter(course =>
-                    course.semesters?.includes('Full Year')
+                    course.semesters?.includes('Full Year')&& course.level == selectedYear
                 );
             default:
                 return Object.values(courses);
@@ -262,7 +206,7 @@ export default function Planner() {
 
     const renderColumn = (label: string, type: ColumnType) => {
         const key = `y${selectedYear}${type}cred` as keyof Program;
-        const requiredCredits = selectedProgramCode
+        const requiredCredits = selectedProgramCode && selectedYear
             ? programs[selectedProgramCode][key]
             : 0;
 
@@ -271,6 +215,8 @@ export default function Planner() {
             (sum, course) => sum + (course?.units || 0),
             0
         );
+
+
 
         return (
             <Card className="w-full sm:w-1/3 p-4 flex flex-col gap-4">
@@ -402,9 +348,9 @@ export default function Planner() {
                     </div>
 
                     <div className="flex items-end">
-                        <Button onClick={addCompulsoryCourses} disabled={!selectedProgramCode || !selectedYear}>
-                            Load
-                        </Button>
+                        {/*<Button onClick={addCompulsoryCourses} disabled={!selectedProgramCode || !selectedYear}>*/}
+                        {/*    Load*/}
+                        {/*</Button>*/}
                     </div>
                 </div>
 
@@ -416,20 +362,56 @@ export default function Planner() {
                 </div>
             {dialogCourse && (
                 <Dialog open={!!dialogCourse} onOpenChange={closeDialog}>
-                    <DialogContent>
+                    <DialogContent className="max-w-xl max-h-[90vh] flex flex-col">
                         <DialogHeader>
-                            <DialogTitle>{dialogCourse.code} - {dialogCourse.title}</DialogTitle>
-                            <DialogDescription>
-                                {dialogCourse.units} units
+                            <DialogTitle>{dialogCourse.code} – {dialogCourse.title}</DialogTitle>
+                            <DialogDescription className="text-muted-foreground">
+                                {dialogCourse.units} units • {dialogCourse.faculty} • Offered in: {dialogCourse.semesters}
                             </DialogDescription>
-                            <DialogTitle>Course Dependency Graph</DialogTitle>
-                                <CourseDependencyGraph courseCode={dialogCourse.code} />
-
                         </DialogHeader>
+
+                        {/* Scrollable content */}
+                        <ScrollArea className="flex-1 pr-2">
+                            <div className="space-y-4 mt-2 text-sm text-muted-foreground pr-2">
+                                <div>
+                                    <span className="font-medium text-foreground">Key Info:</span>
+                                </div>
+
+                                {(dialogCourse.prerequisitesList || dialogCourse.corequisitesList) && (
+                                    <div>
+                                        <PrereqDisplay
+                                            prerequisites={dialogCourse.prerequisitesList}
+                                            corequisites={dialogCourse.corequisitesList}
+                                            columns={columns}
+                                        />
+                                    </div>
+                                )}
+
+                                <div>
+                                    <h4 className="font-semibold mb-1 mt-4">Historical Grade Data</h4>
+                                    <GradeChart overallMean={dialogCourse.overallmean} />
+                                </div>
+
+                                <div>
+                                    <h4 className="font-semibold mb-1 mt-4">Course Dependency Graph</h4>
+                                    <CourseDependencyGraph courseCode={dialogCourse.code} />
+                                </div>
+                            </div>
+                        </ScrollArea>
+
+                        {/* Sticky footer button */}
+                        <div className="pt-4">
+                            <Link href={`/route/${dialogCourse.code}`} passHref>
+                                <button className="w-full bg-primary text-white rounded-md py-2 hover:bg-primary/90 transition">
+                                    Go to Course Page
+                                </button>
+                            </Link>
+                        </div>
                     </DialogContent>
                 </Dialog>
-
             )}
+
+
             {showDuplicateDialog && (
                 <Dialog open={true} onOpenChange={() => setShowDuplicateDialog(false)}>
                     <DialogContent>

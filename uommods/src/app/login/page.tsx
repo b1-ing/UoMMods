@@ -1,29 +1,35 @@
-// app/login/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import {AuthData} from "@/app/components/RatingForm";
+import { AuthData } from "@/app/components/RatingForm";
+
 export default function LoginPage() {
     const [auth, setAuthentication] = useState<AuthData>({
         authenticated: false,
         username: null,
         fullname: null,
     });
+
     const searchParams = useSearchParams();
-    const redirectUrl = searchParams?.get("redirect");
-
-
+    const redirectParam = searchParams?.get("redirect") ?? "/";
 
     useEffect(() => {
         const authAPI = async () => {
-
             try {
-                const searchParams = new URLSearchParams(window.location.search);
-                console.log("client side redirect" , redirectUrl)
-                // const search = window.location.search; // safe to use inside useEffect
-                const queryString = searchParams.toString();
-                const response = await fetch(`/api/login?redirect=${encodeURIComponent(redirectUrl)}${queryString ? `&${queryString}` : ''}`, {
+                const allParams = new URLSearchParams(window.location.search);
+
+                // Extract and remove redirect param
+                const redirectUrl = allParams.get("redirect") ?? "/";
+                allParams.delete("redirect");
+
+                // Remaining params (like csticket, username, fullname)
+                const remaining = allParams.toString();
+
+                // Final API request URL
+                const loginUrl = `/api/login?redirect=${encodeURIComponent(redirectUrl)}${remaining ? `&${remaining}` : ""}`;
+
+                const response = await fetch(loginUrl, {
                     method: "GET",
                     headers: {
                         "Content-Type": "application/json",
@@ -36,26 +42,25 @@ export default function LoginPage() {
                 const data = await response.json();
 
                 if (!data.auth) {
-                    console.log("fail")
-                    window.location.href = data.url; // Redirect if not authenticated
+                    console.log("🔐 Not authenticated, redirecting to:", data.url);
+                    window.location.href = data.url;
                 } else {
-                    console.log("pass")
+                    console.log("✅ Authenticated! Redirecting to:", data.url);
                     setAuthentication({
                         authenticated: true,
                         username: data.username,
                         fullname: data.fullname,
                     });
-                    window.location.replace(data.url);
+
+                    window.location.replace(redirectUrl); // Go back to original page
                 }
             } catch (error) {
-                console.error("An error occurred during authentication:", error);
-
+                console.error("❌ Auth error:", error);
             }
         };
 
         authAPI();
     }, []);
 
-    return <p>Redirecting to login...</p>;
+    return <p>🔄 Redirecting to login...</p>;
 }
-

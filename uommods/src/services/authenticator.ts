@@ -26,8 +26,13 @@ export class Authenticator {
         this.session = session;
     }
 
-    static async init(req: IncomingMessage, res: ServerResponse, query: Record<string, string | undefined>) {
-        const session = await getSessionData(req, res);
+    static async init(
+        req: IncomingMessage,
+        res: ServerResponse,
+        query: Record<string, string | undefined>,
+        session?: Session // new optional param
+    ) {
+        // const finalSession = session ?? await getSessionData(req, res);
         return new Authenticator(req, res, query, session);
     }
     is_authenticated(): boolean {
@@ -39,44 +44,43 @@ export class Authenticator {
         );
     }
 
-    async validate_user(redirectUrl: string) {
-        console.log (this.is_authenticated())
-        console.log(redirectUrl)
-        console.log(this.query.csticket)
-        console.log("session:" + this.session.csticket)
-        console.log(this.session.redirectUrl);
+    async validate_user() {
+        // Use stored redirect URL in session or fallback
         const storedRedirect = this.session.redirectUrl;
-        const finalRedirectUrl = (
-            storedRedirect && storedRedirect !== "http://localhost:3000/login" && !storedRedirect
-        ) ? storedRedirect : redirectUrl;
-        this.session.redirectUrl = finalRedirectUrl;
+        const fallbackUrl = process.env.APP_HOME_URL!;
+        console.log(storedRedirect)
 
-        await this.session.save();
-        console.log(finalRedirectUrl);
+        const finalRedirectUrl = (typeof storedRedirect === "string" && storedRedirect.trim() !== "" && storedRedirect !== "http://localhost:3000/login")
+            ? storedRedirect
+            : fallbackUrl;
+
+        console.log("🔐 Session CSTicket:", this.session.csticket);
+        console.log("🌍 Final Redirect URL:", finalRedirectUrl);
 
         if (this.is_authenticated()) {
+            // Return the stored redirect URL when authenticated
             return this.auth_response(true, finalRedirectUrl);
         }
+
+        // Authentication logic if not authenticated ...
         if (!this.session.csticket || !this.query.csticket) {
-            console.log("sending to auth 1")
+            console.log("🚪 Not authenticated, sending to auth service (no ticket)");
             return this.send_for_authentication("http://localhost:3000/login");
         }
         if (this.query.csticket !== this.session.csticket) {
-            console.log("sending to auth 2")
+            console.log("🚪 Not authenticated, sending to auth service (ticket mismatch)");
             return this.send_for_authentication("http://localhost:3000/login");
         }
-        if (await this.match_server_auth(redirectUrl)) {
-            console.log("chjecking")
+        if (await this.match_server_auth(finalRedirectUrl)) {
+            console.log("✔️ Authentication successful, recording user");
             await this.record_authenticated_user();
             return this.auth_response(false, finalRedirectUrl);
         }
         return this.auth_response(true, finalRedirectUrl);
     }
-
     async send_for_authentication(redirectUrl: string) {
         const csticket = Date.now().toString(16);
         this.session.csticket = csticket;
-        this.session.redirectUrl = redirectUrl;
 
         await this.session.save();
         console.log(this.session.csticket)

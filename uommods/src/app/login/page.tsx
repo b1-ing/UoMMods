@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { AuthData } from "@/app/components/RatingForm";
 
 export default function LoginPage() {
@@ -9,34 +9,30 @@ export default function LoginPage() {
         authenticated: false,
         username: null,
         fullname: null,
+        redirectUrl: null,
     });
 
     const searchParams = useSearchParams();
-    const redirectParam = searchParams?.get("redirect") ?? "/";
+    const router = useRouter();
 
     useEffect(() => {
         const authAPI = async () => {
             try {
-                const allParams = new URLSearchParams(window.location.search);
+                const urlParams = new URLSearchParams(window.location.search);
+                console.log(urlParams.get("redirect"));
 
-                // Extract and remove redirect param
-                const redirectUrl = allParams.get("redirect") ?? "/";
-                allParams.delete("redirect");
+                const redirectParam = urlParams.get("redirect") ?? (auth.redirectUrl? auth.redirectUrl : "/");
+                urlParams.delete("redirect");
 
-                // Remaining params (like csticket, username, fullname)
-                const remaining = allParams.toString();
+                const querySuffix = urlParams.toString();
+                const loginApiUrl = `/api/login?redirect=${encodeURIComponent(redirectParam)}${querySuffix ? `&${querySuffix}` : ""}`;
 
-                // Final API request URL
-                const loginUrl = `/api/login?redirect=${encodeURIComponent(redirectUrl)}${remaining ? `&${remaining}` : ""}`;
-
-                const response = await fetch(loginUrl, {
+                const response = await fetch(loginApiUrl, {
                     method: "GET",
                     headers: {
                         "Content-Type": "application/json",
-                        "Access-Control-Allow-Credentials": "true",
                     },
-                    mode: "cors",
-                    credentials: "include",
+                    credentials: "include", // ✅ Required for session cookies
                 });
 
                 const data = await response.json();
@@ -44,23 +40,26 @@ export default function LoginPage() {
                 if (!data.auth) {
                     console.log("🔐 Not authenticated, redirecting to:", data.url);
                     window.location.href = data.url;
-                } else {
-                    console.log("✅ Authenticated! Redirecting to:", data.url);
-                    setAuthentication({
-                        authenticated: true,
-                        username: data.username,
-                        fullname: data.fullname,
-                    });
-
-                    window.location.replace(redirectUrl); // Go back to original page
+                    return;
                 }
-            } catch (error) {
-                console.error("❌ Auth error:", error);
+
+                // ✅ Authentication success
+                console.log("✅ Authenticated! Redirecting to:", redirectParam);
+                setAuthentication({
+                    authenticated: true,
+                    username: data.username,
+                    fullname: data.fullname,
+                    redirectUrl: data.url,
+                });
+
+                router.replace(data.url); // use Next.js router for SPA-style transition
+            } catch (err) {
+                console.error("❌ Error during auth flow:", err);
             }
         };
 
         authAPI();
-    }, []);
+    }, [searchParams]);
 
     return <p>🔄 Redirecting to login...</p>;
 }

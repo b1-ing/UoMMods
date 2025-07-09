@@ -13,27 +13,43 @@ export class Authenticator {
     res: ServerResponse;
     query: Record<string, string | undefined>;
     session: Session;
+    redirectUrl: string;
 
     constructor(
         req: IncomingMessage,
         res: ServerResponse,
         query: Record<string, string | undefined>,
-        session: Session
+        session: Session,
+        redirectUrl: string
     ) {
         this.req = req;
         this.res = res;
         this.query = query;
         this.session = session;
+        this.redirectUrl = redirectUrl;
     }
 
     static async init(
         req: IncomingMessage,
         res: ServerResponse,
         query: Record<string, string | undefined>,
-        session?: Session // new optional param
+        session?: Session, // new optional param
+        redirectUrl?: string
     ) {
-        // const finalSession = session ?? await getSessionData(req, res);
-        return new Authenticator(req, res, query, session);
+        const finalsession = session ?? await getSessionData(req, res);
+        const isValidRedirect = (url: any): url is string =>
+            typeof url === 'string' &&
+            url.trim() !== '' &&
+            url !== 'null' &&
+            url !== 'undefined' &&
+            url !== 'http://localhost:3000/login';
+
+        if (!finalsession.redirectUrl && isValidRedirect(redirectUrl)) {
+            finalsession.redirectUrl = redirectUrl;
+            await finalsession.save();
+            console.log('✅ Stored initial redirect in session:', redirectUrl);
+        }
+        return new Authenticator(req, res, query, finalsession!, redirectUrl!);
     }
     is_authenticated(): boolean {
         const authTime = this.session.authenticated;
@@ -57,6 +73,8 @@ export class Authenticator {
         console.log("🔐 Session CSTicket:", this.session.csticket);
         console.log("🌍 Final Redirect URL:", finalRedirectUrl);
 
+
+
         if (this.is_authenticated()) {
             // Return the stored redirect URL when authenticated
             return this.auth_response(true, finalRedirectUrl);
@@ -74,9 +92,11 @@ export class Authenticator {
         if (await this.match_server_auth(finalRedirectUrl)) {
             console.log("✔️ Authentication successful, recording user");
             await this.record_authenticated_user();
-            return this.auth_response(false, finalRedirectUrl);
+            return this.auth_response(true, finalRedirectUrl);
+        } else {
+            console.log("❌ Authentication server validation failed");
+            return this.auth_response(false, finalRedirectUrl); // ← return false, not true
         }
-        return this.auth_response(true, finalRedirectUrl);
     }
     async send_for_authentication(redirectUrl: string) {
         const csticket = Date.now().toString(16);

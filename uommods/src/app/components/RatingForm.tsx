@@ -14,8 +14,10 @@ type Props = {
 };
 export type AuthData = {
     authenticated: boolean
-    username: string | null | undefined
-    fullname: string | null | undefined
+    username: string | null
+    fullname: string | null
+    redirectUrl: string | null
+
 }
 
 

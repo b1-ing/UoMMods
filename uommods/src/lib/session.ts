@@ -1,6 +1,9 @@
 import {getIronSession, IronSession} from 'iron-session';
 import { IncomingMessage, ServerResponse } from 'http';
 
+
+
+
 interface SessionData {
     username?: string;
     fullname?: string;
@@ -21,6 +24,11 @@ export const sessionOptions = {
     },
 };
 
-export async function getSessionData(req: IncomingMessage, res: ServerResponse) {
-    return await getIronSession(req, res, sessionOptions);
+
+
+export async function getSessionData(
+    req: IncomingMessage,
+    res: ServerResponse
+): Promise<Session> {
+    return await getIronSession<SessionData>(req, res, sessionOptions);
 }

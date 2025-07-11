@@ -18,20 +18,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         url !== 'undefined' &&
         url !== 'http://localhost:3000/login';
 
-    // Load session early to optionally store redirect
-    const session: Session = await getSessionData(req, res);
-    session.destroy(); // 💥 Destroy any existing session data
-    await session.save();
 
-    // If this is the first auth call and we got a valid redirect, store it in session
-    if (!session.redirectUrl && isValidRedirect(redirectUrl)) {
-        session.redirectUrl = redirectUrl;
-        await session.save();
-        console.log('✅ Stored initial redirect in session:', redirectUrl);
-    }
 
     // Run auth logic via your Authenticator class
-    const auth = await Authenticator.init(req, res, query, session);
+    const auth = await Authenticator.init(req, res, query, undefined, redirectUrl);
     const result = await auth.validate_user(); // validate_user now fetches redirect from session
 
     console.log('🧭 Auth result:', result);

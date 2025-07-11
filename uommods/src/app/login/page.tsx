@@ -52,7 +52,7 @@ export default function LoginPage() {
                         fullname: data.fullname,
                     });
 
-                    window.location.replace(redirectUrl); // Go back to original page
+                    window.location.replace(data.url); // Go back to original page
                 }
             } catch (error) {
                 console.error("❌ Auth error:", error);

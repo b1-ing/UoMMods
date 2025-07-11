@@ -28,6 +28,7 @@ export default function RatingForm({ courseCode, onRatingSubmitted }: Props) {
     const [username, setUsername] = useState<string | null>(null);
     const [fullname, setFullname]= useState<string | null>(null);
     const [url, setUrl] = useState<string | "">("");
+    const [user, setUser] = useState<{ fullname: string; username: string } | null>(null);
     const [auth, setAuthentication] = useState<AuthData>({
         authenticated: false,
         username: null,
@@ -36,9 +37,52 @@ export default function RatingForm({ courseCode, onRatingSubmitted }: Props) {
     const [redirectUrl, setRedirectUrl] = useState<string>("");
 
     useEffect(() => {
+        const fetchUser = async () => {
+            const res = await fetch("/api/session");
+            const data = await res.json();
+            if (data.auth) {
+                setUser(data.user);
+            }
+        };
+        fetchUser();
+    }, []);
+
+    useEffect(() => {
         if (typeof window !== "undefined") {
             setRedirectUrl(encodeURIComponent(window.location.href));
         }
+    }, []);
+
+    useEffect(() => {
+        const fetchSession = async () => {
+            try {
+                const res = await fetch("/api/session");
+                const data = await res.json();
+
+                if (data.auth) {
+                    setAuthentication({
+                        authenticated: true,
+                        username: data.user.username ?? null,
+                        fullname: data.user.fullname ?? null,
+                    });
+                    setUsername(data.user.username ?? null);
+                    setFullname(data.user.fullname ?? null);
+                } else {
+                    setAuthentication({
+                        authenticated: false,
+                        username: null,
+                        fullname: null,
+                    });
+                }
+            } catch (e) {
+                console.error("Failed to fetch session", e);
+            } finally {
+                // ✅ Move this AFTER state has been set
+                setLoading(false);
+            }
+        };
+
+        fetchSession();
     }, []);
 
 
@@ -86,17 +130,16 @@ export default function RatingForm({ courseCode, onRatingSubmitted }: Props) {
 
     return (
         <div className="space-y-4 mt-6 p-4 border rounded-md shadow-sm">
-                <p>
-                    {!loading && !auth.authenticated && (
-                        <Link
-                            href={`/login?redirect=${redirectUrl}`}
-                            className="ml-2 inline-flex items-center px-4 py-2 bg-black text-white rounded-md text-sm font-medium hover:bg-gray-800"
-                        >
-                            Log in
-                        </Link>
-                    )}
-                </p>
-            {auth.authenticated && (
+            {loading ? (
+                <p>🔄 Checking login status...</p>
+            ) : !auth.authenticated ? (
+                <Link
+                    href={`/login?redirect=${redirectUrl}`}
+                    className="ml-2 inline-flex items-center px-4 py-2 bg-black text-white rounded-md text-sm font-medium hover:bg-gray-800"
+                >
+                    Log in to rate
+                </Link>
+            ) : (
                 <>
                 <h2 className="text-xl font-semibold">Rate this Course</h2>
 

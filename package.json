@@ -1,0 +1,14 @@
+{
+  "homepage": "https://b1-ing.github.io/UoMMods/",
+  "devDependencies": {
+    "gh-pages": "^6.3.0"
+  },
+  "scripts": {
+      "predeploy": "npm run build",
+      "deploy": "gh-pages -d build",
+    "dev": "next dev --turbopack",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+      }
+}

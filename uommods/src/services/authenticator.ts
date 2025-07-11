@@ -12,28 +12,32 @@ export class Authenticator {
     req: IncomingMessage;
     res: ServerResponse;
     query: Record<string, string | undefined>;
-    session: Session;
+    session: Session ;
+    redirectUrl: string | undefined;
 
     constructor(
         req: IncomingMessage,
         res: ServerResponse,
         query: Record<string, string | undefined>,
-        session: Session
+        session: Session,
+        redirectUrl: string | undefined
     ) {
         this.req = req;
         this.res = res;
         this.query = query;
         this.session = session;
+        this.redirectUrl = redirectUrl;
     }
 
     static async init(
         req: IncomingMessage,
         res: ServerResponse,
         query: Record<string, string | undefined>,
-        session?: Session // new optional param
+        session?: Session, // new optional param
+        redirectUrl?: string | undefined
     ) {
-        // const finalSession = session ?? await getSessionData(req, res);
-        return new Authenticator(req, res, query, session);
+        const finalSession = session ?? await getSessionData(req, res);
+        return new Authenticator(req, res, query, finalSession, redirectUrl);
     }
     is_authenticated(): boolean {
         const authTime = this.session.authenticated;
@@ -67,14 +71,14 @@ export class Authenticator {
             console.log("🚪 Not authenticated, sending to auth service (no ticket)");
             return this.send_for_authentication("http://localhost:3000/login");
         }
-        if (this.query.csticket !== this.session.csticket) {
+        if (this.query.csticket !== this.session?.csticket) {
             console.log("🚪 Not authenticated, sending to auth service (ticket mismatch)");
             return this.send_for_authentication("http://localhost:3000/login");
         }
         if (await this.match_server_auth(finalRedirectUrl)) {
             console.log("✔️ Authentication successful, recording user");
             await this.record_authenticated_user();
-            return this.auth_response(false, finalRedirectUrl);
+            return this.auth_response(false, "http://localhost:3000/login");
         }
         return this.auth_response(true, finalRedirectUrl);
     }

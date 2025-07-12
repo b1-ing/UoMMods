@@ -6,6 +6,8 @@ import { URLSearchParams } from 'url';
 
 const AUTHENTICATION_SERVICE_URL = process.env.AUTHENTICATION_SERVICE_URL!;
 const AUTHENTICATION_LOGOUT_URL = process.env.AUTHENTICATION_LOGOUT_URL!;
+const baseUrl = process.env.APP_HOME_URL!;
+
 
 export class Authenticator {
     req: IncomingMessage;
@@ -68,16 +70,16 @@ export class Authenticator {
         // Authentication logic if not authenticated ...
         if (!this.session.csticket || !this.query.csticket) {
             console.log("🚪 Not authenticated, sending to auth service (no ticket)");
-            return this.send_for_authentication("http://localhost:3000/login");
+            return this.send_for_authentication(`${baseUrl}/login`);
         }
         if (this.query.csticket !== this.session?.csticket) {
             console.log("🚪 Not authenticated, sending to auth service (ticket mismatch)");
-            return this.send_for_authentication("http://localhost:3000/login");
+            return this.send_for_authentication(`${baseUrl}/login`);
         }
         if (await this.match_server_auth(finalRedirectUrl)) {
             console.log("✔️ Authentication successful, recording user");
             await this.record_authenticated_user();
-            return this.auth_response(false, "http://localhost:3000/login");
+            return this.auth_response(false, `${baseUrl}/login`);
         }
         return this.auth_response(true, finalRedirectUrl);
     }

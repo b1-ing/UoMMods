@@ -11,7 +11,7 @@ export default function LandingPage() {
                   UoMMods helps you explore, compare, and plan your university modules — with visual workload charts,
                   prerequisite graphs, and grade history.
               </p>
-              <Image src="/planner.png" alt="App preview" className="rounded-lg shadow-lg mx-auto w-full max-w-3xl"/>
+              <Image src="/planner.png" width={800} height={800} alt="App preview" className="rounded-lg shadow-lg mx-auto w-full max-w-3xl"/>
               <a href="/course-planner" className="space-y-8 px-4 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 transition">
                   Launch Planner
               </a>

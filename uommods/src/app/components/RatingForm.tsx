@@ -144,7 +144,6 @@ export default function RatingForm({ courseCode, onRatingSubmitted }: Props) {
                 <>
                 <h2 className="text-xl font-semibold">Rate this Course</h2>
 
-
                 <RatingSlider label="Difficulty" value={difficulty} onChange={setDifficulty}/>
                 <RatingSlider label="Teaching Quality" value={quality} onChange={setQuality}/>
                 <RatingSlider label="Enjoyment" value={enjoyment} onChange={setEnjoyment}/>

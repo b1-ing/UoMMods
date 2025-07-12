@@ -4,9 +4,8 @@ import { URLSearchParams } from 'url';
 
 
 
-const AUTHENTICATION_SERVICE_URL = process.env.NEXT_PUBLIC_AUTHENTICATION_SERVICE_URL!;
-const AUTHENTICATION_LOGOUT_URL = process.env.NEXT_PUBLIC_AUTHENTICATION_LOGOUT_URL!;
-const APP_HOME_URL = process.env.NEXT_PUBLIC_APP_HOME_URL!;
+const AUTHENTICATION_SERVICE_URL = process.env.AUTHENTICATION_SERVICE_URL!;
+const AUTHENTICATION_LOGOUT_URL = process.env.AUTHENTICATION_LOGOUT_URL!;
 
 export class Authenticator {
     req: IncomingMessage;
@@ -108,7 +107,7 @@ export class Authenticator {
     build_auth_url(command: string, redirectUrl: string) {
         const csticket = this.session.csticket;
         const params = new URLSearchParams({
-            url: redirectUrl ?? APP_HOME_URL,
+            url: redirectUrl ?? process.env.APP_HOME_URL,
             csticket: csticket || '',
             version: '3',
             command: command,

@@ -16,7 +16,7 @@ export default function CourseListPage() {
 
     useEffect(() => {
         const fetchCourses = async () => {
-            const { data, error } = await supabase.from("courses").select("*");
+            const { data } = await supabase.from("courses").select("*");
             if (data) setCourses(data);
         };
 

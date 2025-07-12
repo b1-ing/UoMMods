@@ -1,4 +1,5 @@
 import HeaderBar from "@/app/components/HeaderBar";
+import Image from "next/image";
 export default function LandingPage() {
   return (
       <main className="min-h-screen bg-gradient-to-b from-white to-slate-100 text-gray-800">
@@ -10,7 +11,7 @@ export default function LandingPage() {
                   UoMMods helps you explore, compare, and plan your university modules — with visual workload charts,
                   prerequisite graphs, and grade history.
               </p>
-              <img src="/planner.png" alt="App preview" className="rounded-lg shadow-lg mx-auto w-full max-w-3xl"/>
+              <Image src="/planner.png" alt="App preview" className="rounded-lg shadow-lg mx-auto w-full max-w-3xl"/>
               <a href="/course-planner" className="space-y-8 px-4 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 transition">
                   Launch Planner
               </a>

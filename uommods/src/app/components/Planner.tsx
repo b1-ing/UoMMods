@@ -1,6 +1,7 @@
 "use client"
 
 import React, {useEffect, useState} from 'react';
+import { useCallback } from "react";
 import {Card, CardContent, CardTitle} from '@/components/ui/card'
 import {
     Drawer,
@@ -95,11 +96,52 @@ export default function Planner() {
         setOpenDrawer(null)
     }
 
+
+    const addCompulsoryCourses = useCallback(() => {
+        const program = programs[selectedProgramCode as keyof typeof programs];
+        if (!program || !selectedYear) return;
+
+        const newColumns: Record<ColumnType, Course[]> = {
+            year: [],
+            sem1: [],
+            sem2: [],
+        };
+
+        const toCourse = (code: string): Course => courses[code];
+
+        switch (selectedYear) {
+            case 1:
+                newColumns.year = program.firstyrfy.map(toCourse);
+                newColumns.sem1 = program.firstyrs1.map(toCourse);
+                newColumns.sem2 = program.firstyrs2.map(toCourse);
+                break;
+            case 2:
+                newColumns.year = program.secondyrfy.map(toCourse);
+                newColumns.sem1 = [...program.secondyrs1comp].map(toCourse);
+                newColumns.sem2 = [...program.secondyrs2comp].map(toCourse);
+                break;
+            case 3:
+                newColumns.year = program.thirdyrfy.map(toCourse);
+                newColumns.sem1 = program.thirdyrs1.map(toCourse);
+                newColumns.sem2 = program.thirdyrs2.map(toCourse);
+                break;
+            default:
+                return;
+        }
+
+        setColumns(newColumns);
+    }, [selectedProgramCode, selectedYear]);
+
+
+
+
+
+
     useEffect(() => {
         if (selectedProgramCode && selectedYear) {
             addCompulsoryCourses();
         }
-    }, [selectedProgramCode, selectedYear]);
+    }, [selectedProgramCode, selectedYear, addCompulsoryCourses]);
 
 
     const removeCourseFromColumn = (course: Course, column: ColumnType) => {
@@ -122,52 +164,6 @@ export default function Planner() {
         return Object.values(columns).some(column =>
             column.some(course => course?.code === code)
         );
-    }
-
-
-
-    const addCompulsoryCourses = () => {
-        const program = programs[selectedProgramCode as keyof typeof programs]
-        if (!program || !selectedYear) return
-
-        const newColumns: Record<ColumnType, Course[]> = {
-            year: [],
-            sem1: [],
-            sem2: [],
-        }
-        console.log(program.secondyrfy)
-        const toCourse = (code: string): Course => (courses[code])
-
-        switch (selectedYear) {
-            case 1:
-                newColumns.year = program.firstyrfy.map(toCourse)
-                newColumns.sem1 = program.firstyrs1.map(toCourse)
-                newColumns.sem2 = program.firstyrs2.map(toCourse)
-                break
-            case 2:
-                newColumns.year = program.secondyrfy.map(toCourse)
-                newColumns.sem1 = [...program.secondyrs1comp].map(toCourse)
-                newColumns.sem2 = [...program.secondyrs2comp].map(toCourse)
-
-                break
-            case 3:
-                newColumns.year = program.thirdyrfy.map(toCourse)
-                newColumns.sem1 = program.thirdyrs1.map(toCourse)
-                newColumns.sem2 = program.thirdyrs2.map(toCourse)
-                break
-            default:
-                return
-        }
-
-        setColumns(newColumns)
-        console.log(columns['year'])
-    }
-
-
-    type PlannerProps = {
-        prerequisites: string | undefined
-        corequisites: string| undefined
-        columns: Record<ColumnType, Course[]>
     }
 
 

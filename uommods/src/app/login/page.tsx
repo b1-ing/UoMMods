@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
 import { AuthData } from "@/app/components/RatingForm";
 
 export default function LoginPage() {
@@ -11,8 +10,6 @@ export default function LoginPage() {
         fullname: null,
     });
 
-    const searchParams = useSearchParams();
-    const redirectParam = searchParams?.get("redirect") ?? "/";
 
     useEffect(() => {
         const authAPI = async () => {
@@ -51,6 +48,7 @@ export default function LoginPage() {
                         username: data.username,
                         fullname: data.fullname,
                     });
+                    console.log(auth)
 
                     window.location.replace(data.url); // Go back to original page
                 }
@@ -60,7 +58,7 @@ export default function LoginPage() {
         };
 
         authAPI();
-    }, []);
+    });
 
     return <p>🔄 Redirecting to login...</p>;
 }

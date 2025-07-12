@@ -3,7 +3,6 @@ import { supabase } from '@/lib/supabase'
 import CourseDependencyGraph from "@/app/components/CourseDependencyGraph";
 
 import WorkloadChart from "@/app/components/WorkloadChart"
-import Component from "@/app/components/Comments"
 import GradeChart from "@/app/components/GradeChart"
 import HeaderBar from "@/app/components/HeaderBar";
 

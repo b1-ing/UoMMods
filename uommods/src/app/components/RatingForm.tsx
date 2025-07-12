@@ -16,7 +16,6 @@ export type AuthData = {
     authenticated: boolean
     username: string | null
     fullname: string | null
-    redirectUrl: string | null
 
 }
 
@@ -29,7 +28,6 @@ export default function RatingForm({ courseCode, onRatingSubmitted }: Props) {
     const [loading, setLoading] = useState(false);
     const [username, setUsername] = useState<string | null>(null);
     const [fullname, setFullname]= useState<string | null>(null);
-    const [url, setUrl] = useState<string | "">("");
     const [user, setUser] = useState<{ fullname: string; username: string } | null>(null);
     const [auth, setAuthentication] = useState<AuthData>({
         authenticated: false,
@@ -44,10 +42,11 @@ export default function RatingForm({ courseCode, onRatingSubmitted }: Props) {
             const data = await res.json();
             if (data.auth) {
                 setUser(data.user);
+                console.log(user)
             }
         };
         fetchUser();
-    }, []);
+    }, [user]);
 
     useEffect(() => {
         if (typeof window !== "undefined") {

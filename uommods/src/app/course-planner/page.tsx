@@ -1,6 +1,11 @@
+"use client"
+import dynamic from 'next/dynamic';
+import HeaderBar from '@/app/components/HeaderBar';
 
-import Planner from "@/app/components/Planner"
-import HeaderBar from "@/app/components/HeaderBar";
+const Planner = dynamic(() => import('@/app/components/Planner'), {
+    ssr: false, // 💥 THIS disables SSR and avoids the call error
+});
+
 export default function CoursePlanner(){
 
 

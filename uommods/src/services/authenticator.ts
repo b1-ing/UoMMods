@@ -55,7 +55,7 @@ export class Authenticator {
         const fallbackUrl = process.env.APP_HOME_URL!;
         console.log(storedRedirect)
 
-        const finalRedirectUrl = (typeof storedRedirect === "string" && storedRedirect.trim() !== "" && storedRedirect !== "http://localhost:3000/login")
+        const finalRedirectUrl = (typeof storedRedirect === "string" && storedRedirect.trim() !== "" && storedRedirect !== "http://uommods.vercel.app")
             ? storedRedirect
             : fallbackUrl;
 

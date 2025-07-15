@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import {useState, useEffect, useMemo} from 'react';
 import { supabase } from '@/lib/supabase';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
@@ -46,13 +46,17 @@ export default function RatingForm({ courseCode, onRatingSubmitted }: Props) {
             }
         };
         fetchUser();
-    }, [user]);
+    }, []);
 
     useEffect(() => {
         if (typeof window !== "undefined") {
             setRedirectUrl(encodeURIComponent(window.location.href));
         }
     }, []);
+
+    const decodedName = useMemo(() => {
+        return user ? decodeURIComponent(user.fullname) : ""
+    }, [user])
 
     useEffect(() => {
         const fetchSession = async () => {
@@ -143,6 +147,8 @@ export default function RatingForm({ courseCode, onRatingSubmitted }: Props) {
             ) : (
                 <>
                 <h2 className="text-xl font-semibold">Rate this Course</h2>
+
+                    <h3>Posting as {decodedName}</h3>
 
                 <RatingSlider label="Difficulty" value={difficulty} onChange={setDifficulty}/>
                 <RatingSlider label="Teaching Quality" value={quality} onChange={setQuality}/>

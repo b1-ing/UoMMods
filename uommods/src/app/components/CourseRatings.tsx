@@ -55,6 +55,15 @@ function OverallRatings({
     );
 }
 
+
+const getInitials = (name: string) =>
+    name
+        .split(" ")
+        .map(n => n[0])
+        .join("")
+        .toUpperCase();
+
+
 type Props = {
     courseCode: string;
     refreshFlag?: boolean;
@@ -67,6 +76,7 @@ type Rating = {
     enjoyment: number;
     comment?: string;
     created_at: string;
+    fullname: string;
 };
 
 export default function CourseRatings({courseCode, refreshFlag}: Props) {
@@ -110,6 +120,7 @@ export default function CourseRatings({courseCode, refreshFlag}: Props) {
             <h2 className="text-xl font-semibold">Student Ratings & Comments</h2>
             {ratings.map((r) => (
                 <div key={r.id} className="border rounded p-4 shadow-sm bg-white">
+                    <h2>{decodeURIComponent(r.fullname)}</h2>
                     <p>
                         <strong>Difficulty:</strong> {r.difficulty}/5
                     </p>

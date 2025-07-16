@@ -21,7 +21,7 @@ import {
 
 } from "@/components/ui/dialog"
 import CourseDependencyGraph from "@/app/components/CourseDependencyGraphMini";
-import {Course, courses} from "@/lib/mockcourses"
+import {Course} from "@/lib/mockcourses"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {PrereqDisplay} from "@/app/components/PrereqDisplay";
 import GradeChart from "@/app/components/GradeChart";
@@ -208,7 +208,7 @@ export default function Planner() {
 
 
         const currentCredits = columns[type].reduce(
-            (sum, course) => sum + (course?.units || 0),
+            (sum, course) => sum + (course?.credits || 0),
             0
         );
 
@@ -258,7 +258,7 @@ export default function Planner() {
                                     />
                                 )}
                                 <div className="text-sm text-muted-foreground">
-                                    {course.units} units
+                                    {course.credits} units
                                 </div>
                             </Card>
                         ) : null
@@ -283,7 +283,7 @@ export default function Planner() {
                                             <div className="font-medium">
                                                 {course.code}
                                                 <p>
-                                                    {course.title} ({course.units} units)
+                                                    {course.title} ({course.credits} units)
                                                 </p>
                                             </div>
                                             {course.prerequisitesList && (
@@ -362,7 +362,7 @@ export default function Planner() {
                         <DialogHeader>
                             <DialogTitle>{dialogCourse.code} – {dialogCourse.title}</DialogTitle>
                             <DialogDescription className="text-muted-foreground">
-                                {dialogCourse.units} units • {dialogCourse.faculty} • Offered in: {dialogCourse.semesters}
+                                {dialogCourse.credits} units • {dialogCourse.faculty} • Offered in: {dialogCourse.semesters}
                             </DialogDescription>
                         </DialogHeader>
 

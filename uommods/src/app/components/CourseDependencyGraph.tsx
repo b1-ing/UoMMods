@@ -5,7 +5,6 @@ import ReactFlow, {
     Position,
 } from "reactflow";
 import "reactflow/dist/style.css";
-import { courses } from "@/lib/mockcourses";
 
 type Props = {
     courseCode: string;

@@ -20,6 +20,8 @@ export default function CourseListPage() {
             if (data) setCourses(data);
         };
 
+        console.log(courses)
+
         fetchCourses();
     }, []);
 
@@ -82,7 +84,7 @@ export default function CourseListPage() {
                                 </CardHeader>
                                 <CardContent className="text-sm text-muted-foreground">
                                     <p>{course.faculty}</p>
-                                    <p>{course.units} Units</p>
+                                    <p>{course.credits} Units</p>
                                     <p>Offered in: {course.semesters}</p>
                                 </CardContent>
                             </Card>

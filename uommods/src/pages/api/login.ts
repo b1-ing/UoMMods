@@ -11,7 +11,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         : (typeof redirectRaw === 'string' ? redirectRaw : process.env.APP_HOME_URL!);
 
 
-    console.log(redirectUrl);
+    console.log(redirectRaw);
 
 
 

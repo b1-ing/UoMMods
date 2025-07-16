@@ -38,7 +38,9 @@ export default function RatingForm({ courseCode, onRatingSubmitted }: Props) {
     useEffect(() => {
         const fetchSession = async () => {
             try {
-                const res = await fetch("/api/session");
+                const res = await fetch("/api/session",{
+                    credentials: "include",
+                });
                 const data = await res.json();
                 if (data.auth) {
                     setAuthentication({
@@ -58,6 +60,7 @@ export default function RatingForm({ courseCode, onRatingSubmitted }: Props) {
             } catch (e) {
                 console.error("Failed to fetch session", e);
             } finally {
+                console.log(auth)
                 setLoading(false);
             }
         };

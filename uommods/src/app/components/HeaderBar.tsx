@@ -46,7 +46,9 @@ export default function HeaderBar() {
     useEffect(() => {
         const fetchSession = async () => {
             try {
-                const res = await fetch("/api/session")
+                const res = await fetch("/api/session",{
+                    credentials: "include",
+                });
                 if (res.ok) {
                     const data = await res.json()
                     if (data.auth) {
@@ -128,7 +130,7 @@ export default function HeaderBar() {
                                             </button>
                                         </>
                                     ) : (
-                                        <Link href="/login" className="block px-4 py-2 text-sm hover:bg-gray-100">
+                                        <Link href={`/login?redirect=${encodeURIComponent(window.location.pathname)}`} className="block px-4 py-2 text-sm hover:bg-gray-100">
                                             <LogIn className="inline-block w-4 h-4 mr-2" /> Login
                                         </Link>
                                     )}

@@ -58,7 +58,7 @@ export default function LoginPage() {
         };
 
         authAPI();
-    });
+    }, [auth]);
 
     return <p>🔄 Redirecting to login...</p>;
 }

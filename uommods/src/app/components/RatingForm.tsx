@@ -1,24 +1,24 @@
 "use client";
 
-import {useState, useEffect, useMemo} from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { toast } from "sonner"
+import { toast } from "sonner";
 import Link from "next/link";
+import { Star } from "lucide-react";
 
 type Props = {
     courseCode: string;
     onRatingSubmitted?: () => void;
 };
+
 export type AuthData = {
-    authenticated: boolean
-    username: string | null
-    fullname: string | null
-
-}
-
+    authenticated: boolean;
+    username: string | null;
+    fullname: string | null;
+};
 
 export default function RatingForm({ courseCode, onRatingSubmitted }: Props) {
     const [difficulty, setDifficulty] = useState(3);
@@ -27,8 +27,7 @@ export default function RatingForm({ courseCode, onRatingSubmitted }: Props) {
     const [comment, setComment] = useState('');
     const [loading, setLoading] = useState(false);
     const [username, setUsername] = useState<string | null>(null);
-    const [fullname, setFullname]= useState<string | null>(null);
-    const [user, setUser] = useState<{ fullname: string; username: string } | null>(null);
+    const [fullname, setFullname] = useState<string | null>(null);
     const [auth, setAuthentication] = useState<AuthData>({
         authenticated: false,
         username: null,
@@ -37,33 +36,10 @@ export default function RatingForm({ courseCode, onRatingSubmitted }: Props) {
     const [redirectUrl, setRedirectUrl] = useState<string>("");
 
     useEffect(() => {
-        const fetchUser = async () => {
-            const res = await fetch("/api/session");
-            const data = await res.json();
-            if (data.auth) {
-                setUser(data.user);
-                console.log(user)
-            }
-        };
-        fetchUser();
-    });
-
-    useEffect(() => {
-        if (typeof window !== "undefined") {
-            setRedirectUrl(encodeURIComponent(window.location.href));
-        }
-    }, []);
-
-    const decodedName = useMemo(() => {
-        return user ? decodeURIComponent(user.fullname) : ""
-    }, [user])
-
-    useEffect(() => {
         const fetchSession = async () => {
             try {
                 const res = await fetch("/api/session");
                 const data = await res.json();
-
                 if (data.auth) {
                     setAuthentication({
                         authenticated: true,
@@ -82,33 +58,26 @@ export default function RatingForm({ courseCode, onRatingSubmitted }: Props) {
             } catch (e) {
                 console.error("Failed to fetch session", e);
             } finally {
-                // ✅ Move this AFTER state has been set
                 setLoading(false);
             }
         };
-
         fetchSession();
-    });
+    }, []);
 
 
 
+    useEffect(() => {
+        if (typeof window !== "undefined") {
+            setRedirectUrl(encodeURIComponent(window.location.href));
+        }
+    }, []);
 
-
-
-
+    const decodedName = useMemo(() => {
+        return fullname ? decodeURIComponent(fullname) : "";
+    }, [fullname]);
 
     async function handleSubmit() {
-        console.log(fullname)
         setLoading(true);
-        console.log("Inserting rating:", {
-            course_code: courseCode,
-            difficulty,
-            quality,
-            enjoyment,
-            comment,
-            fullname,
-            username,
-        });
         const { error } = await supabase.from('ratings').insert([{
             course_code: courseCode,
             difficulty,
@@ -127,80 +96,88 @@ export default function RatingForm({ courseCode, onRatingSubmitted }: Props) {
             setQuality(3);
             setEnjoyment(3);
             setComment('');
-            onRatingSubmitted?.(); // notify parent to refresh ratings
+            onRatingSubmitted?.();
         } else {
             toast('Error submitting rating');
         }
-    };
+    }
 
     return (
-        <div className="space-y-4 mt-6 p-4 border rounded-md shadow-sm">
+        <div className="mt-6 p-6 border rounded-md shadow-sm space-y-4">
             {loading ? (
                 <p>🔄 Checking login status...</p>
             ) : !auth.authenticated ? (
                 <Link
                     href={`/login?redirect=${redirectUrl}`}
-                    className="ml-2 inline-flex items-center px-4 py-2 bg-black text-white rounded-md text-sm font-medium hover:bg-gray-800"
+                    className="inline-flex items-center px-4 py-2 bg-black text-white rounded-md text-sm font-medium hover:bg-gray-800"
                 >
                     Log in to rate
                 </Link>
             ) : (
                 <>
-                <h2 className="text-xl font-semibold">Rate this Course</h2>
+                    <h2 className="text-xl font-semibold">Rate this Course</h2>
+                    <p className="text-sm text-gray-600 mb-4">Posting as {decodedName}</p>
 
-                    <h3>Posting as {decodedName}</h3>
+                    <div className="flex flex-col md:flex-row gap-6">
+                        {/* Left: Sliders */}
+                        <div className="flex-1 space-y-6">
+                            <RatingSlider label="Difficulty" value={difficulty} onChange={setDifficulty} />
+                            <RatingSlider label="Teaching Quality" value={quality} onChange={setQuality} />
+                            <RatingSlider label="Enjoyment" value={enjoyment} onChange={setEnjoyment} />
+                        </div>
 
-                <RatingSlider label="Difficulty" value={difficulty} onChange={setDifficulty}/>
-                <RatingSlider label="Teaching Quality" value={quality} onChange={setQuality}/>
-                <RatingSlider label="Enjoyment" value={enjoyment} onChange={setEnjoyment}/>
+                        {/* Divider */}
+                        <div className="hidden md:block w-px bg-gray-300" />
 
-
-                <div className="space-y-2">
-                    <Label>Comments</Label>
-                    <Textarea value={comment} onChange={(e) => {
-                        setComment(e.target.value)
-                    }}/>
-                </div>
-
-                <Button onClick={handleSubmit} disabled={loading}>
-                    {loading ? 'Submitting...' : 'Submit Rating'}
-                </Button>
+                        {/* Right: Comment box */}
+                        <div className="flex-1 space-y-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="comment">Comments</Label>
+                                <Textarea
+                                    id="comment"
+                                    value={comment}
+                                    onChange={(e) => setComment(e.target.value)}
+                                    placeholder="Any specific thoughts?"
+                                    className="min-h-[120px]"
+                                />
+                            </div>
+                            <Button onClick={handleSubmit} disabled={loading} className="w-full">
+                                {loading ? 'Submitting...' : 'Submit Rating'}
+                            </Button>
+                        </div>
+                    </div>
                 </>
-)}
-            </div>
-
-            );
-
-            }
-
-            function RatingSlider({
-            label,
-            value,
-            onChange,
-        }: {
-            label: string;
-            value: number;
-            onChange: (v: number) => void;
-        }) {
-            return (
-            <div className="space-y-1">
-            <Label className="block">{label}: {value}</Label>
-    <div className="flex gap-2">
-        {[1, 2, 3, 4, 5].map((v) => (
-            <Button
-                key={v}
-                type="button"
-                className={`w-10 h-10 rounded border text-sm font-medium
-              ${v === value
-                            ? 'bg-black text-white border-blue-600'
-                            : 'bg-white text-gray-700 border-gray-300 hover:bg-blue-100'}`}
+            )}
+        </div>
+    );
+}
+function RatingSlider({
+                          label,
+                          value,
+                          onChange,
+                      }: {
+    label: string;
+    value: number;
+    onChange: (v: number) => void;
+}) {
+    return (
+        <div className="flex items-center justify-between">
+            <Label className="text-sm font-medium">{label}</Label>
+            <div className="flex gap-1">
+                {[1, 2, 3, 4, 5].map((v) => (
+                    <button
+                        key={v}
                         onClick={() => onChange(v)}
+                        className="text-yellow-500 hover:scale-110 transition-transform"
                     >
-                        {v}
-                    </Button>
+                        <Star
+                            size={20}
+                            fill={v <= value ? "currentColor" : "none"}
+                            stroke="currentColor"
+                        />
+                    </button>
                 ))}
             </div>
         </div>
     );
-
 }

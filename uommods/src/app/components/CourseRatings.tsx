@@ -2,32 +2,29 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import {Star} from "lucide-react"
 
 // OverallRatings component from earlier
-const Star = ({ filled }: { filled: boolean }) => (
-    <svg
-        className={`w-5 h-5 ${filled ? 'text-yellow-400' : 'text-gray-300'}`}
-        fill="currentColor"
-        viewBox="0 0 20 20"
-    >
-        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.966a1 1 0 00.95.69h4.167c.969 0 1.371 1.24.588 1.81l-3.37 2.448a1 1 0 00-.364 1.118l1.287 3.966c.3.92-.755 1.688-1.54 1.117L10 13.347l-3.37 2.448c-.785.57-1.84-.197-1.54-1.117l1.287-3.966a1 1 0 00-.364-1.118L3.644 9.393c-.783-.57-.38-1.81.588-1.81h4.167a1 1 0 00.95-.69l1.286-3.966z" />
-    </svg>
-);
 
-const RatingBar = ({ label, value }: { label: string; value: number }) => {
-    const filledStars = Math.round(value);
+
+function RatingBar({ label, value }: { label: string; value: number }) {
     return (
-        <div className="flex items-center space-x-2">
-            <div className="w-24 font-semibold">{label}</div>
-            <div className="flex">
-                {[1, 2, 3, 4, 5].map((i) => (
-                    <Star key={i} filled={i <= filledStars} />
+        <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-gray-700">{label}</span>
+            <div className="flex gap-1">
+                {[1, 2, 3, 4, 5].map((v) => (
+                    <Star
+                        key={v}
+                        size={18}
+                        className="text-yellow-500"
+                        fill={v <= value ? "currentColor" : "none"}
+                        stroke="currentColor"
+                    />
                 ))}
             </div>
-            <div className="ml-2 text-sm">{value.toFixed(1)}/5.0</div>
         </div>
     );
-};
+}
 
 function OverallRatings({
                             difficulty,
@@ -39,23 +36,50 @@ function OverallRatings({
     enjoyment: number;
 }) {
     const overall = (difficulty + quality + enjoyment) / 3;
+    const percentage = Math.min((overall / 5) * 100, 100);
+
     return (
-        <div className="flex bg-white p-6 rounded-xl shadow-md border border-gray-200 max-w-2xl w-full mx-auto mb-8">
-            {/* Left side: Big overall score */}
-            <div className="flex flex-col justify-center items-center w-1/3 border-r pr-6">
-                <div className="text-5xl font-extrabold text-black leading-tight">{overall.toFixed(1)}</div>
-                <div className="text-sm text-gray-500">Overall Score</div>
+        <div className="mt-6 p-6 border rounded-md shadow-sm space-y-4 w-full mx-auto bg-white flex flex-col md:flex-row items-center gap-6">
+            {/* Left: Larger, thinner circular score */}
+            <div className="relative w-36 h-36 flex-shrink-0">
+                <svg className="transform -rotate-90 w-full h-full" viewBox="0 0 100 100">
+                    <circle
+                        cx="50"
+                        cy="50"
+                        r="45"
+                        stroke="#e5e7eb"
+                        strokeWidth="4" // thinner stroke
+                        fill="none"
+                    />
+                    <circle
+                        cx="50"
+                        cy="50"
+                        r="45"
+                        stroke="black"
+                        strokeWidth="4"
+                        fill="none"
+                        strokeDasharray="282.74"
+                        strokeDashoffset={282.74 - (percentage / 100) * 282.74}
+                        strokeLinecap="round"
+                    />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <div className="text-3xl font-bold text-black">
+                        {overall.toFixed(1)}
+                    </div>
+                    <div className="text-sm text-gray-500">/ 5.0</div>
+                </div>
             </div>
-            <div className="space-y-3">
-                <RatingBar label="Difficulty" value={difficulty}/>
-                <RatingBar label="Teaching Quality" value={quality}/>
-                <RatingBar label="Enjoyment" value={enjoyment}/>
+
+            {/* Right: Rating bars with stars */}
+            <div className="flex-1 w-full space-y-4">
+                <RatingBar label="Difficulty" value={difficulty} />
+                <RatingBar label="Teaching Quality" value={quality} />
+                <RatingBar label="Enjoyment" value={enjoyment} />
             </div>
         </div>
     );
 }
-
-
 
 
 type Props = {

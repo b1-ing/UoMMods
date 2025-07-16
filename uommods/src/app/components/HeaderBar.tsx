@@ -52,7 +52,6 @@ export default function HeaderBar() {
                     if (data.auth) {
                         console.log(data)
                         setUser({ fullname: data.user.fullname, username: data.user.username })
-                        console.log(user)
                     }
                 }
             } catch (err) {
@@ -61,7 +60,7 @@ export default function HeaderBar() {
         }
 
         fetchSession()
-    })
+    }, [])
 
     const decodedName = useMemo(() => {
         return user ? decodeURIComponent(user.fullname) : ""

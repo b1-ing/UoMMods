@@ -51,8 +51,18 @@ export class Authenticator {
 
     async validate_user() {
         // Use stored redirect URL in session or fallback
-        const storedRedirect = this.session.redirectUrl;
+        let storedRedirect = this.session.redirectUrl;
         const fallbackUrl = process.env.APP_HOME_URL!;
+        console.log(storedRedirect)
+
+        const newRedirect = this.redirectUrl
+
+        if (!storedRedirect && newRedirect !== "") {
+            this.session.redirectUrl = newRedirect;
+            await this.session.save()
+            storedRedirect = this.session.redirectUrl;
+        }
+
         console.log(storedRedirect)
 
         const finalRedirectUrl = (typeof storedRedirect === "string" && storedRedirect.trim() !== "" && storedRedirect !== process.env.APP_HOME_URL!)

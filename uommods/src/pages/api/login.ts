@@ -11,6 +11,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         : (typeof redirectRaw === 'string' ? redirectRaw : process.env.APP_HOME_URL!);
 
 
+    console.log(redirectUrl);
+
+
 
     // Run auth logic via your Authenticator class
     const auth = await Authenticator.init(req, res, query  as Record<string, string | undefined>, undefined, redirectUrl);

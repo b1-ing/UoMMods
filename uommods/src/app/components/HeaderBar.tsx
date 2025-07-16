@@ -61,7 +61,7 @@ export default function HeaderBar() {
         }
 
         fetchSession()
-    }, [])
+    })
 
     const decodedName = useMemo(() => {
         return user ? decodeURIComponent(user.fullname) : ""

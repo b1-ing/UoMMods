@@ -46,7 +46,7 @@ export default function RatingForm({ courseCode, onRatingSubmitted }: Props) {
             }
         };
         fetchUser();
-    }, []);
+    });
 
     useEffect(() => {
         if (typeof window !== "undefined") {
@@ -88,7 +88,7 @@ export default function RatingForm({ courseCode, onRatingSubmitted }: Props) {
         };
 
         fetchSession();
-    }, []);
+    });
 
 
 

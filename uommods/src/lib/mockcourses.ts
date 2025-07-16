@@ -1,32 +1,70 @@
 // mockCourses.ts
 
 
-
-export type Course =  {
+export type Course = {
     code: string;
     title: string;
     credits: number;
+    mandatory: string;
+    url: string;
+    description: string;
     faculty: string;
     semesters: string;
-    description: string;
-    aims?: string;
     level: number;
-    exam: number,
-    coursework: number,
-    Study: number,
-    Lectures: number,
-    Workshops?: number,
-    Placement?: number,
-    Lab? : number;
-    corequisitesList?: string;       // 👈 NEW
-    prerequisitesList?: string; // 👈 NEW (course codes)
-    requiredBy?: string;        // 👈 NEW (course code
+
+    // Assessment methods
+    assessment_assessment_task?: number;
+    assessment_assignment_2000_words?: number;
+    assessment_lectures?: number;
+    assessment_oral_assessmentpresentation?: number;
+    assessment_practical_skills_assessment?: number;
+    assessment_project_output_not_dissn?: number;
+    assessment_set_exercise?: number;
+    assessment_written_assignment_inc_essay?: number;
+    assessment_written_exam?: number;
+
+    // Study hours
+    independent_independent_study?: number;
+    scheduled_demonstration?: number;
+    scheduled_lectures?: number;
+    scheduled_practical_classes__workshops?: number;
+    scheduled_project_supervision?: number;
+    scheduled_supervised_time_in_studiowksp?: number;
+    scheduled_tutorials?: number;
+
+    // Requirements
+    corequisites_list?: string;
+    prerequisites_list?: string;
+
+    // Other fields
+    freechoice?: boolean;
+
+    // Optional fields used elsewhere
+    aims?: string;
+    exam?: number;
+    coursework?: number;
+    Study?: number;
+    Lectures?: number;
+    Workshops?: number;
+    Placement?: number;
+    Lab?: number;
+    required_by?: string;
     locations?: string[];
     prereqnotes?: string;
-    gradestats? : {     year: string;   mean: number;     stdDev: number;     n: number }[];
-    timetable?: { type: string; location: string; weeks: string }[];
+    gradestats?: {
+        year: string;
+        mean: number;
+        stdDev: number;
+        n: number;
+    }[];
+    timetable?: {
+        type: string;
+        location: string;
+        weeks: string;
+    }[];
     overallmean: number;
-}
+};
+
 
 
 //

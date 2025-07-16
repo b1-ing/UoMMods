@@ -53,19 +53,20 @@ const Page = async({
             <div className="max-w-6xl mx-auto p-6 space-y-6">
                 <h1 className="text-3xl font-bold">{course.code}</h1>
                 <h1 className="text-3xl font-bold">{course.title}</h1>
-                <p className="text-muted-foreground">{course.faculty} - {course.units} Units</p>
+                <p className="text-muted-foreground">{course.faculty} - {course.credits} Units</p>
                 <p>Offered in: {course.semesters}</p>
 
                 <h2 className="font-semibold text-lg">Description</h2>
                 <p className="text-m text-muted-foreground mt-2">{course.description}</p>
 
 
-                <WorkloadChart Lectures={course.Lectures} Placement={course.Placement}
-                               Study={course.Study} Workshops={course.Workshops} Labs={course.Lab}/>
+                <WorkloadChart courseCode={code}/>
                 <h2 className="text-xl font-semibold">Assessment weightage</h2>
-                <AssessmentSplit exam={course.exam} coursework={course.coursework}/>
-                <h2 className="text-xl font-semibold">Historical Grade Statistics</h2>
-                <GradeChart data={course.gradestats} overallMean={course.overallmean}/>
+                <AssessmentSplit courseCode={code}/>
+                {course.gradestats && (<h2 className="text-xl font-semibold">Historical Grade Statistics</h2>)}
+                {course.gradestats && (
+                    <GradeChart data={course.gradestats} overallMean={course.overallmean}/>)}
+
                 <h2 className="text-xl font-semibold">Course Dependency Graph</h2>
                 <CourseDependencyGraph courseCode={course.code}/>
                 <RatingsSection courseCode={course.code} />

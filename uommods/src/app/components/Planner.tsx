@@ -20,30 +20,24 @@ import {
     DialogTitle,
 
 } from "@/components/ui/dialog"
-import CourseDependencyGraph from "@/app/components/CourseDependencyGraphMini";
 import {Course} from "@/lib/mockcourses"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {PrereqDisplay} from "@/app/components/PrereqDisplay";
-import GradeChart from "@/app/components/GradeChart";
 import Link from "next/link";
+import {supabase} from "@/lib/supabase";
 
 
 type ColumnType = 'year' | 'sem1' | 'sem2'
 
 export default function Planner() {
+    const [courses, setCourses] = useState<Record<string, Course>>({});
     const [selectedProgramCode, setSelectedProgramCode] = useState<string>('')
     const [selectedYear, setSelectedYear] = useState<number | ''>('')
-    const [dialogCourse, setDialogCourse] = useState<Course | null>(null);
     const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
     const [pendingCourse, setPendingCourse] = useState<Course | null>(null);
     const [missingPrereqs, setMissingPrereqs] = useState<Course[]>([]);
     const [prereqDialogOpen, setPrereqDialogOpen] = useState(false);
     const [pendingColumn, setPendingColumn] = useState<ColumnType>('year');
-
-
-
-
-    const closeDialog = () => setDialogCourse(null);
 
 
 
@@ -55,6 +49,22 @@ export default function Planner() {
     })
 
 
+    useEffect(() => {
+        const fetchCourses = async () => {
+            const { data } = await supabase.from("courses").select("*");
+            const courseMap: Record<string, Course> = {};
+            if (data) {
+                data.forEach((course) => {
+                    courseMap[course.code] = course;
+                });
+            }
+            setCourses(courseMap);
+        };
+
+        console.log(courses)
+
+        fetchCourses();
+    }, []);
 
 
     const addCourseToColumn = (course: Course, column: ColumnType) => {
@@ -64,8 +74,8 @@ export default function Planner() {
             return;
         }
 
-        const prereqCodes = course.corequisitesList
-            ? splitCourseCodes(course.corequisitesList)
+        const prereqCodes = course.corequisites_list
+            ? splitCourseCodes(course.corequisites_list)
             : [];
 
         const missing = prereqCodes
@@ -107,30 +117,34 @@ export default function Planner() {
             sem2: [],
         };
 
-        const toCourse = (code: string): Course => courses[code];
+        const toCourse = (code: string): Course | null => courses[code] ?? null;
+
+        const safeMap = (arr: string[]) =>
+            arr.map(toCourse).filter((course): course is Course => course !== null);
 
         switch (selectedYear) {
             case 1:
-                newColumns.year = program.firstyrfy.map(toCourse);
-                newColumns.sem1 = program.firstyrs1.map(toCourse);
-                newColumns.sem2 = program.firstyrs2.map(toCourse);
+                newColumns.year = safeMap(program.firstyrfy);
+                newColumns.sem1 = safeMap(program.firstyrs1);
+                newColumns.sem2 = safeMap(program.firstyrs2);
                 break;
             case 2:
-                newColumns.year = program.secondyrfy.map(toCourse);
-                newColumns.sem1 = [...program.secondyrs1comp].map(toCourse);
-                newColumns.sem2 = [...program.secondyrs2comp].map(toCourse);
+                newColumns.year = safeMap(program.secondyrfy);
+                newColumns.sem1 = safeMap(program.secondyrs1comp);
+                newColumns.sem2 = safeMap(program.secondyrs2comp);
                 break;
             case 3:
-                newColumns.year = program.thirdyrfy.map(toCourse);
-                newColumns.sem1 = program.thirdyrs1.map(toCourse);
-                newColumns.sem2 = program.thirdyrs2.map(toCourse);
+                newColumns.year = safeMap(program.thirdyrfy);
+                newColumns.sem1 = safeMap(program.thirdyrs1);
+                newColumns.sem2 = safeMap(program.thirdyrs2);
                 break;
             default:
                 return;
         }
 
         setColumns(newColumns);
-    }, [selectedProgramCode, selectedYear]);
+    }, [selectedProgramCode, selectedYear, courses]);
+
 
 
 
@@ -188,7 +202,7 @@ export default function Planner() {
                 );
             case 'year':
                 return Object.values(courses).filter(course =>
-                    course.semesters?.includes('Full Year')&& course.level == selectedYear
+                    course.semesters?.includes('Full year')&& course.level == selectedYear
                 );
             default:
                 return Object.values(courses);
@@ -228,10 +242,10 @@ export default function Planner() {
                 <CardContent className="space-y-2 p-2">
                     {columns[type].map(course =>
                         course ? (
+                            <Link href={`/route/${course.code}`}>
                             <Card
                                 key={`${type}-${course.code ?? "not found"}`}
                                 className="p-2"
-                                onClick={() => setDialogCourse(course)}
                             >
                                 <div className="flex justify-between items-start">
                                     <div className="font-semibold">
@@ -250,10 +264,10 @@ export default function Planner() {
                                         </Button>
                                     </div>
                                 </div>
-                                {course.prerequisitesList && (
+                                {course.prerequisites_list && (
                                     <PrereqDisplay
-                                        prerequisites={course.prerequisitesList}
-                                        corequisites={course.corequisitesList}
+                                        prerequisites={course.prerequisites_list}
+                                        corequisites={course.corequisites_list}
                                         columns={columns}
                                     />
                                 )}
@@ -261,6 +275,7 @@ export default function Planner() {
                                     {course.credits} units
                                 </div>
                             </Card>
+                            </Link>
                         ) : null
                     )}
                 </CardContent>
@@ -286,10 +301,10 @@ export default function Planner() {
                                                     {course.title} ({course.credits} units)
                                                 </p>
                                             </div>
-                                            {course.prerequisitesList && (
+                                            {course.prerequisites_list && (
                                                 <PrereqDisplay
-                                                    prerequisites={course.prerequisitesList}
-                                                    corequisites={course.corequisitesList}
+                                                    prerequisites={course.prerequisites_list}
+                                                    corequisites={course.corequisites_list}
                                                     columns={columns}
                                                 />
                                             )}
@@ -356,56 +371,6 @@ export default function Planner() {
                     {renderColumn('Semester 1', 'sem1')}
                     {renderColumn('Semester 2', 'sem2')}
                 </div>
-            {dialogCourse && (
-                <Dialog open={!!dialogCourse} onOpenChange={closeDialog}>
-                    <DialogContent className="max-w-xl max-h-[90vh] flex flex-col">
-                        <DialogHeader>
-                            <DialogTitle>{dialogCourse.code} – {dialogCourse.title}</DialogTitle>
-                            <DialogDescription className="text-muted-foreground">
-                                {dialogCourse.credits} units • {dialogCourse.faculty} • Offered in: {dialogCourse.semesters}
-                            </DialogDescription>
-                        </DialogHeader>
-
-                        {/* Scrollable content */}
-                        <ScrollArea className="flex-1 pr-2">
-                            <div className="space-y-4 mt-2 text-sm text-muted-foreground pr-2">
-                                <div>
-                                    <span className="font-medium text-foreground">Key Info:</span>
-                                </div>
-
-                                {(dialogCourse.prerequisitesList || dialogCourse.corequisitesList) && (
-                                    <div>
-                                        <PrereqDisplay
-                                            prerequisites={dialogCourse.prerequisitesList}
-                                            corequisites={dialogCourse.corequisitesList}
-                                            columns={columns}
-                                        />
-                                    </div>
-                                )}
-
-                                <div>
-                                    <h4 className="font-semibold mb-1 mt-4">Historical Grade Data</h4>
-                                    <GradeChart overallMean={dialogCourse.overallmean} />
-                                </div>
-
-                                <div>
-                                    <h4 className="font-semibold mb-1 mt-4">Course Dependency Graph</h4>
-                                    <CourseDependencyGraph courseCode={dialogCourse.code} />
-                                </div>
-                            </div>
-                        </ScrollArea>
-
-                        {/* Sticky footer button */}
-                        <div className="pt-4">
-                            <Link href={`/route/${dialogCourse.code}`} passHref>
-                                <button className="w-full bg-primary text-white rounded-md py-2 hover:bg-primary/90 transition">
-                                    Go to Course Page
-                                </button>
-                            </Link>
-                        </div>
-                    </DialogContent>
-                </Dialog>
-            )}
 
 
             {showDuplicateDialog && (
@@ -471,7 +436,7 @@ export default function Planner() {
                                     const semesters = prereqCourse.semesters ?? [];
 
                                     let targetColumn: ColumnType | null = null;
-                                    if (semesters.includes("Full Year")) targetColumn = "year";
+                                    if (semesters.includes("Full year")) targetColumn = "year";
                                     else if (semesters.includes("Semester 1")) targetColumn = "sem1";
                                     else if (semesters.includes("Semester 2")) targetColumn = "sem2";
 

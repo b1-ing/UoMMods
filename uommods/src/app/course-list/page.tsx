@@ -1,13 +1,14 @@
 "use client";
 import Link from "next/link"
-import { useState, useEffect } from "react";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {useEffect, useState} from "react";
+import {Input} from "@/components/ui/input";
+import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
+import {Label} from "@/components/ui/label";
+import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
 import HeaderBar from "@/app/components/HeaderBar";
 import {supabase} from "@/lib/supabase";
 import {Course} from "@/lib/mockcourses";
+import Fuse from 'fuse.js'
 
 export default function CourseListPage() {
     const [courses, setCourses] = useState<Course[]>([]);
@@ -23,16 +24,26 @@ export default function CourseListPage() {
         fetchCourses();
     }, []);
 
-    const filteredCourses = courses.filter((course) => {
-        const matchesSearch =
-            course.title.toLowerCase().includes(search.toLowerCase()) ||
-            course.code.toLowerCase().includes(search.toLowerCase());
-
-        const courseYear = parseInt(course.code.slice(4, 5)); // e.g., COMP11120 => 1st year
-        const matchesYear = yearFilter === "" || courseYear.toString() === yearFilter;
-
-        return matchesSearch && matchesYear;
+    const fuse = new Fuse(courses, {
+        keys: ["title", "code"]
     });
+    console.log(search)
+    const result = search.trim() === ""
+        ? courses.map((course) => ({ item: course }))
+        : fuse.search(search);
+
+    let filteredCourses = null
+    if (yearFilter === "all" || yearFilter === "") {
+        filteredCourses = result.sort((a, b) => a.item.code.localeCompare(b.item.code));
+    }
+    else{
+        filteredCourses = result.filter((course) => {
+            const courseYear = parseInt(course.item.code.slice(4, 5)); // e.g., COMP11120 => 1st year
+            return yearFilter === "" || courseYear.toString() === yearFilter;
+        }).sort((a, b) => a.item.code.localeCompare(b.item.code));
+    }
+
+
 
     return (
         <div className="min-h-screen bg-gradient-to-b from-white to-slate-100 text-gray-800">
@@ -63,6 +74,7 @@ export default function CourseListPage() {
                                 <SelectItem value="2">2nd Year</SelectItem>
                                 <SelectItem value="3">3rd Year</SelectItem>
                                 <SelectItem value="4">4th Year</SelectItem>
+                                <SelectItem value="all">All Years</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
@@ -71,19 +83,19 @@ export default function CourseListPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {filteredCourses.map((course) => (
                         <Link
-                            key={course.code}
-                            href={`/route/${course.code}`}
+                            key={course.item.code}
+                            href={`/route/${course.item.code}`}
                             className="transition-colors hover:text-foreground/80"
                         >
-                            <Card key={course.code} className="hover:shadow-md cursor-pointer transition-all">
+                            <Card key={course.item.code} className="hover:shadow-md cursor-pointer transition-all">
                                 <CardHeader>
-                                    <CardTitle>{course.code}</CardTitle>
-                                    <p className="text-muted-foreground text-sm">{course.title}</p>
+                                    <CardTitle>{course.item.code}</CardTitle>
+                                    <p className="text-muted-foreground text-sm">{course.item.title}</p>
                                 </CardHeader>
                                 <CardContent className="text-sm text-muted-foreground">
-                                    <p>{course.faculty}</p>
-                                    <p>{course.credits} Units</p>
-                                    <p>Offered in: {course.semesters}</p>
+                                    <p>{course.item.faculty}</p>
+                                    <p>{course.item.credits} Units</p>
+                                    <p>Offered in: {course.item.semesters}</p>
                                 </CardContent>
                             </Card>
                         </Link>

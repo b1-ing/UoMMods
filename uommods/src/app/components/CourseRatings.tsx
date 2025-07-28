@@ -137,8 +137,13 @@ export default function CourseRatings({courseCode, refreshFlag}: Props) {
             {/* Individual ratings list */}
             <h2 className="text-xl font-semibold">Student Ratings & Comments</h2>
             {ratings.map((r) => (
-                <div key={r.id} className="border rounded p-4 shadow-sm bg-white">
-                    <h2>{decodeURIComponent(r.fullname)}</h2>
+                <div key={r.id} className="border rounded-lg p-4 shadow-sm bg-white">
+                    <div className="flex items-center gap-4 mb-2">
+                        <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center text-white font-semibold text-lg">
+                            {decodeURIComponent(r.fullname).charAt(0)}
+                        </div>
+                        <h2 className="text-lg font-bold">{decodeURIComponent(r.fullname)}</h2>
+                    </div>
                     <p>
                         <strong>Difficulty:</strong> {r.difficulty}/5
                     </p>
@@ -149,7 +154,7 @@ export default function CourseRatings({courseCode, refreshFlag}: Props) {
                         <strong>Enjoyment:</strong> {r.enjoyment}/5
                     </p>
                     {r.comment && (
-                        <p className="mt-2 italic text-muted-foreground">“{r.comment}”</p>
+                        <p className="mt-2">{r.comment}</p>
                     )}
                     <p className="text-xs text-gray-400 mt-2">
                         Posted on {new Date(r.created_at).toLocaleDateString()}

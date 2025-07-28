@@ -20,8 +20,6 @@ export default function CourseListPage() {
             if (data) setCourses(data);
         };
 
-        console.log(courses)
-
         fetchCourses();
     }, []);
 

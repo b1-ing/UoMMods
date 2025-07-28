@@ -9,6 +9,7 @@ import HeaderBar from "@/app/components/HeaderBar";
 import AssessmentSplit from "@/app/components/AssessmentSplit";
 import RatingsSection from "@/app/components/RatingsSection";
 import {Toaster} from "@/components/ui/sonner";
+import ProgramDependencyGraph from "@/app/components/ProgramDependencyGraph";
 
 
 
@@ -69,6 +70,8 @@ const Page = async({
 
                 <h2 className="text-xl font-semibold">Course Dependency Graph</h2>
                 <CourseDependencyGraph courseCode={course.code}/>
+                <ProgramDependencyGraph />
+
                 <RatingsSection courseCode={course.code} />
             </div>
             <Toaster />

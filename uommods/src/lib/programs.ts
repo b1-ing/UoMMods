@@ -18,30 +18,13 @@ export type Program = {
   y2sem1cred: number;
   y2sem2cred: number;
   thirdyrfy: string[];
-  thirdyrs1: string[];
-  thirdyrs2: string[];
+  thirdyrs1comp: string[];
+  thirdyrs1op: string[];
+  thirdyrs2comp: string[];
+  thirdyrs2op: string[];
+  y3yearcred: number;
+  y3sem1cred: number;
+  y3sem2cred: number;
+
 };
 
-export const programs: Record<string, Program> = {
-  CompSci: {
-    code: "CompSci",
-    title: "BSc Computer Science",
-    firstyrfy: ["COMP10120", "COMP11120"],
-    firstyrs1: ["COMP12111","COMP15111","COMP16321"],
-    firstyrs2: [],
-    y1yearcred: 40,
-    y1sem1cred: 40,
-    y1sem2cred: 40,
-    secondyrfy: ["COMP26120", "COMP26020"],
-    secondyrs1comp: ["COMP23311"],
-    secondyrs1op: ["COMP21111", "COMP22111", "COMP24011", "COMP23111"],
-    secondyrs2comp: ["COMP23412"],
-    secondyrs2op: ["COMP22712", "COMP24112", "COMP24412", "COMP25212", "COMP27112", "COMP28112"],
-    y2yearcred: 40,
-    y2sem1cred: 40,
-    y2sem2cred: 40,
-    thirdyrfy: [],
-    thirdyrs1: [],
-    thirdyrs2: [],
-  },
-};

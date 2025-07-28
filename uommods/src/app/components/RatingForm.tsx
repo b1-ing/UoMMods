@@ -60,7 +60,6 @@ export default function RatingForm({ courseCode, onRatingSubmitted }: Props) {
             } catch (e) {
                 console.error("Failed to fetch session", e);
             } finally {
-                console.log(auth)
                 setLoading(false);
             }
         };

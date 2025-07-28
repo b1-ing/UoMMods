@@ -48,7 +48,7 @@ export default function LoginPage() {
                         username: data.username,
                         fullname: data.fullname,
                     });
-                    console.log(auth)
+
 
                     window.location.replace(data.url); // Go back to original page
                 }
@@ -58,7 +58,15 @@ export default function LoginPage() {
         };
 
         authAPI();
+
     }, []);
 
-    return <p>🔄 Redirecting to login...</p>;
+    return (
+        <div>
+        {auth.authenticated ? (
+            <p>Welcome, {auth.fullname}!</p>
+        ) : (
+            <p>Loading...</p>
+        )}
+    </div>)
 }

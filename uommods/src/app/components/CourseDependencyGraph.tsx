@@ -8,13 +8,14 @@ import ReactFlow, {
 } from "reactflow";
 import "reactflow/dist/style.css";
 import { supabase } from "@/lib/supabase";
+import {Course} from "@/lib/mockcourses"
 
 type Props = {
     courseCode: string;
 };
 
 export default function CourseDependencyGraph({ courseCode }: Props) {
-    const [course, setCourse] = useState<any>(null);
+    const [course, setCourse] = useState<Course | null >(null);
     const [nodesState, setNodesState, onNodesChange] = useNodesState([]);
     const [edgesState, setEdgesState, onEdgesChange] = useEdgesState([]);
 
@@ -63,6 +64,8 @@ export default function CourseDependencyGraph({ courseCode }: Props) {
                 .from("courses")
                 .select("code, title")
                 .in("code", relatedCodes);
+
+            console.log(relError)
 
             const titleMap = new Map<string, string>();
             relatedCourses?.forEach(c => titleMap.set(c.code, c.title));

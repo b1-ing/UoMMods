@@ -10,7 +10,7 @@ import {
     DrawerTitle,
 } from '@/components/ui/drawer'
 import {Button} from '@/components/ui/button'
-import {Program, programs} from '@/lib/programs'
+import {Program} from '@/lib/programs'
 import { Trash } from 'lucide-react';
 import {
     Dialog,
@@ -47,6 +47,8 @@ export default function Planner() {
         sem1: [],
         sem2: [],
     })
+    const [programs, setPrograms] = useState<Record<string, Program>>({});
+
 
 
     useEffect(() => {
@@ -61,10 +63,32 @@ export default function Planner() {
             setCourses(courseMap);
         };
 
-        console.log(courses)
 
         fetchCourses();
     }, []);
+
+
+    useEffect(() => {
+        const fetchPrograms = async () => {
+            const { data, error } = await supabase.from("programs").select("*");
+
+            if (error) {
+                console.error("Error fetching programs:", error);
+                return;
+            }
+
+            // Convert array to object for easier access
+            const programMap: Record<string, Program> = {};
+            data?.forEach((program) => {
+                programMap[program.code] = program;
+            });
+
+            setPrograms(programMap);
+        };
+
+        fetchPrograms();
+    }, []);
+
 
 
     const addCourseToColumn = (course: Course, column: ColumnType) => {
@@ -135,15 +159,15 @@ export default function Planner() {
                 break;
             case 3:
                 newColumns.year = safeMap(program.thirdyrfy);
-                newColumns.sem1 = safeMap(program.thirdyrs1);
-                newColumns.sem2 = safeMap(program.thirdyrs2);
+                newColumns.sem1 = safeMap(program.thirdyrs1comp);
+                newColumns.sem2 = safeMap(program.thirdyrs2comp);
                 break;
             default:
                 return;
         }
 
         setColumns(newColumns);
-    }, [selectedProgramCode, selectedYear, courses]);
+    }, [selectedProgramCode, selectedYear, courses, programs]);
 
 
 
@@ -216,8 +240,10 @@ export default function Planner() {
 
     const renderColumn = (label: string, type: ColumnType) => {
         const key = `y${selectedYear}${type}cred` as keyof Program;
-        const requiredCredits = selectedProgramCode && selectedYear
-            ? programs[selectedProgramCode][key]
+        const program = programs[selectedProgramCode];
+        console.log(programs);
+        const requiredCredits = program
+            ? (program[key as keyof Program] as number)
             : 0;
 
 
@@ -242,9 +268,9 @@ export default function Planner() {
                 <CardContent className="space-y-2 p-2">
                     {columns[type].map(course =>
                         course ? (
-                            <Link href={`/route/${course.code}`}>
+                            <Link href={`/route/${course.code}`}
+                                  key={`${type}-${course.code ?? "not found"}`}>
                             <Card
-                                key={`${type}-${course.code ?? "not found"}`}
                                 className="p-2"
                             >
                                 <div className="flex justify-between items-start">

@@ -65,14 +65,25 @@ export default function Planner() {
             const courseMap: Record<string, Course> = {};
             if (data) {
                 data.forEach((record) => {
-                    const course = record.courses;
-                    if (course && course.code) {
-                        courseMap[course.code] = {
-                            ...course,
-                            code: course.code,
+                    const courses = record.courses;
+                    if (Array.isArray(courses)) {
+                        courses.forEach((course) => {
+                            if (course?.code) {
+                                courseMap[course.code] = {
+                                    ...course,
+                                    code: course.code,
+                                };
+                            }
+                        });
+                    } else if (courses?.code) {
+                        // fallback in case it's not an array
+                        courseMap[courses.code] = {
+                            ...courses,
+                            code: courses.code,
                         };
                     }
                 });
+
             }
 
             setCourses(courseMap);

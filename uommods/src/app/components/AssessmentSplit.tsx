@@ -7,11 +7,13 @@ type Props = {
     courseCode: string;
 };
 
+type AssessmentType = {
+    name: string;
+};
+
 type AssessmentRow = {
     percentage: number;
-    assessment_types: {
-        name: string;
-    };
+    assessment_types: AssessmentType[];
 };
 
 
@@ -63,7 +65,8 @@ export default function AssessmentSplit({ courseCode }: Props) {
                             className="text-xs font-semibold text-center truncate"
                         >
                             <span className={`text-gray-700 ${color.replace('bg-', 'text-')}`}>
-                                {item.assessment_types.name}: {item.percentage*100}%
+                                {item.assessment_types[0]?.name}: {item.percentage * 100}%
+
                             </span>
                         </div>
                     );
@@ -82,7 +85,8 @@ export default function AssessmentSplit({ courseCode }: Props) {
                             className={`${color} h-full relative flex items-center justify-center text-white text-xs font-semibold whitespace-nowrap
                                 transition-transform duration-200 ease-in-out hover:brightness-110 hover:scale-105 cursor-pointer`}
                             style={{ width: `${item.percentage*100}%` }}
-                            title={`${item.assessment_types.name}: ${item.percentage*100}%`}
+                            title={`${item.assessment_types[0]?.name}: ${item.percentage * 100}%
+`}
                         >
                             {showLabel && (
                                 <span className="pointer-events-none select-none">

@@ -7,6 +7,7 @@ import type {Edge, Node} from 'reactflow';
 import ReactFlow, {Background, Controls, MarkerType, MiniMap, Position, useEdgesState, useNodesState,} from 'reactflow';
 import 'reactflow/dist/style.css';
 import {Course} from '@/lib/mockcourses';
+import {Program} from "estree";
 
 // Init Supabase
 const supabase = createClient(
@@ -14,6 +15,11 @@ const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
+type Props = {
+    selectedCourseId: string;
+    Program: string;
+
+}
 
 
 type Style = {
@@ -22,7 +28,7 @@ type Style = {
     strokeDasharray?: string;
 }
 
-export default function CourseFlow() {
+export default function CourseFlow({selectedCourseId, Program}: Props) {
     const [nodes, setNodes, onNodesChange] = useNodesState([]);
     const [edges, setEdges, onEdgesChange] = useEdgesState([]);
     const [loading, setLoading] = useState(true);

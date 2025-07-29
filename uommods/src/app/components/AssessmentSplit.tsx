@@ -7,76 +7,91 @@ type Props = {
     courseCode: string;
 };
 
-const ASSESSMENT_COLUMNS: Record<string, { type: "exam" | "coursework"; label: string }> = {
-    assessment_written_exam: { type: "exam", label: "Written Exam" },
-    assessment_assessment_task: { type: "coursework", label: "Assessment Task" },
-    assessment_assignment_2000_words: { type: "coursework", label: "2000-word Assignment" },
-    assessment_lectures: { type: "coursework", label: "Lectures" },
-    assessment_oral_assessmentpresentation: { type: "coursework", label: "Oral Presentation" },
-    assessment_practical_skills_assessment: { type: "coursework", label: "Practical Skills" },
-    assessment_project_output_not_dissn: { type: "coursework", label: "Project Output" },
-    assessment_set_exercise: { type: "coursework", label: "Set Exercise" },
-    assessment_written_assignment_inc_essay: { type: "coursework", label: "Written Assignment" },
+type AssessmentRow = {
+    percentage: number;
+    assessment_types: {
+        name: string;
+    };
 };
 
+
+const COLORS = [
+    "bg-blue-600",
+    "bg-green-600",
+    "bg-purple-600",
+    "bg-yellow-500",
+    "bg-pink-500",
+    "bg-red-500",
+    "bg-indigo-500",
+    "bg-emerald-500",
+    "bg-orange-400",
+];
+
 export default function AssessmentSplit({ courseCode }: Props) {
-    const [exam, setExam] = useState(0);
-    const [coursework, setCoursework] = useState(0);
+    const [assessments, setAssessments] = useState<AssessmentRow[]>([]);
 
     useEffect(() => {
         const fetchData = async () => {
             const { data, error } = await supabase
-                .from("courses")
-                .select("*")
-                .eq("code", courseCode)
-                .single();
+                .from("course_assessments")
+                .select("percentage, assessment_types(name)")
+                .eq("course_code", courseCode);
 
             if (error || !data) {
                 console.error("Failed to fetch assessment data", error);
                 return;
             }
 
-            let examTotal = 0;
-            let courseworkTotal = 0;
-
-            for (const column in ASSESSMENT_COLUMNS) {
-                const value = Number(data[column]);
-                if (!isNaN(value)) {
-                    if (ASSESSMENT_COLUMNS[column].type === "exam") examTotal += value;
-                    else courseworkTotal += value;
-                }
-            }
-
-            setExam(examTotal);
-            setCoursework(courseworkTotal);
+            setAssessments(data);
         };
 
         fetchData();
     }, [courseCode]);
 
-    const total = exam + coursework;
-    if (total === 0) return <p>No assessment breakdown available.</p>;
-
-    const examPercentage = (exam / total) * 100;
-    const courseworkPercentage = (coursework / total) * 100;
+    if (assessments.length === 0) return <p>No assessment breakdown available.</p>;
 
     return (
-        <div className="space-y-2">
+        <div className="space-y-1 w-full max-w-xl mx-auto">
+            {/* Labels row */}
+            <div className="flex justify-start gap-1 px-1">
+                {assessments.map((item, idx) => {
+                    const color = COLORS[idx % COLORS.length];
+                    return (
+                        <div
+                            key={idx}
+                            style={{ width: `${item.percentage*100}%` }}
+                            className="text-xs font-semibold text-center truncate"
+                        >
+                            <span className={`text-gray-700 ${color.replace('bg-', 'text-')}`}>
+                                {item.assessment_types.name}: {item.percentage*100}%
+                            </span>
+                        </div>
+                    );
+                })}
+            </div>
 
+            {/* Progress bar */}
+            <div className="w-full bg-gray-200 rounded-full h-8 flex overflow-hidden relative">
+                {assessments.map((item, idx) => {
+                    const color = COLORS[idx % COLORS.length];
+                    const showLabel = item.percentage > 7;
 
-            <div className="w-full h-6 rounded-full bg-muted overflow-hidden flex">
-                <div
-                    className="bg-blue-500 h-full text-xs text-white flex items-center justify-center"
-                    style={{ width: `${examPercentage}%` }}
-                >
-                    {examPercentage >= 15 && `Exam ${examPercentage.toFixed(0)}%`}
-                </div>
-                <div
-                    className="bg-emerald-500 h-full text-xs text-white flex items-center justify-center"
-                    style={{ width: `${courseworkPercentage}%` }}
-                >
-                    {courseworkPercentage >= 15 && `Coursework ${courseworkPercentage.toFixed(0)}%`}
-                </div>
+                    return (
+                        <div
+                            key={idx}
+                            className={`${color} h-full relative flex items-center justify-center text-white text-xs font-semibold whitespace-nowrap
+                                transition-transform duration-200 ease-in-out hover:brightness-110 hover:scale-105 cursor-pointer`}
+                            style={{ width: `${item.percentage*100}%` }}
+                            title={`${item.assessment_types.name}: ${item.percentage*100}%`}
+                        >
+                            {showLabel && (
+                                <span className="pointer-events-none select-none">
+                                    {item.percentage*100}%
+                                </span>
+                            )}
+                        </div>
+                    );
+                })}
             </div>
         </div>
     );

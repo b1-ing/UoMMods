@@ -53,20 +53,39 @@ export default function Planner() {
 
     useEffect(() => {
         const fetchCourses = async () => {
-            const { data } = await supabase.from("courses").select("*");
+            console.log(selectedProgramCode)
+            const { data } = await supabase
+                .from('course_programs')
+                .select(`
+                course_code,
+                courses (
+                *)`
+
+                ).eq('program_id', selectedProgramCode);
             const courseMap: Record<string, Course> = {};
             if (data) {
-                data.forEach((course) => {
-                    courseMap[course.code] = course;
+                data.forEach((record) => {
+                    const course = record.courses;
+                    if (course && course.code) {
+                        courseMap[course.code] = {
+                            ...course,
+                            code: course.code,
+                        };
+                    }
                 });
             }
+
             setCourses(courseMap);
+
         };
 
 
         fetchCourses();
-    }, []);
+    }, [selectedProgramCode]);
 
+    useEffect(() => {
+        console.log(courses)
+    }, [courses]);
 
     useEffect(() => {
         const fetchPrograms = async () => {
@@ -80,7 +99,7 @@ export default function Planner() {
             // Convert array to object for easier access
             const programMap: Record<string, Program> = {};
             data?.forEach((program) => {
-                programMap[program.code] = program;
+                programMap[program.program_id] = program;
             });
 
             setPrograms(programMap);
@@ -88,6 +107,11 @@ export default function Planner() {
 
         fetchPrograms();
     }, []);
+
+    useEffect(() => {
+
+        console.log(programs)
+    }, [programs]);
 
 
 
@@ -149,8 +173,8 @@ export default function Planner() {
         switch (selectedYear) {
             case 1:
                 newColumns.year = safeMap(program.firstyrfy);
-                newColumns.sem1 = safeMap(program.firstyrs1);
-                newColumns.sem2 = safeMap(program.firstyrs2);
+                newColumns.sem1 = safeMap(program.firstyrs1comp);
+                newColumns.sem2 = safeMap(program.firstyrs2comp);
                 break;
             case 2:
                 newColumns.year = safeMap(program.secondyrfy);
@@ -218,15 +242,15 @@ export default function Planner() {
         switch (type) {
             case 'sem1':
                 return Object.values(courses).filter(course =>
-                    course.semesters?.includes('Semester 1') && course.level == selectedYear
+                    course.semesters?.includes('Semester 1') && course.level == selectedYear && course.mandatory === "Optional"
                 );
             case 'sem2':
                 return Object.values(courses).filter(course =>
-                    course.semesters?.includes('Semester 2')&& course.level == selectedYear
+                    course.semesters?.includes('Semester 2')&& course.level == selectedYear && course.mandatory === "Optional"
                 );
             case 'year':
                 return Object.values(courses).filter(course =>
-                    course.semesters?.includes('Full year')&& course.level == selectedYear
+                    course.semesters?.includes('Full year')&& course.level == selectedYear && course.mandatory === "Optional"
                 );
             default:
                 return Object.values(courses);
@@ -241,7 +265,7 @@ export default function Planner() {
     const renderColumn = (label: string, type: ColumnType) => {
         const key = `y${selectedYear}${type}cred` as keyof Program;
         const program = programs[selectedProgramCode];
-        console.log(programs);
+        console.log(program);
         const requiredCredits = program
             ? (program[key as keyof Program] as number)
             : 0;
@@ -271,13 +295,14 @@ export default function Planner() {
                             <Link href={`/route/${course.code}`}
                                   key={`${type}-${course.code ?? "not found"}`}>
                             <Card
-                                className="p-2"
+                                className="p-2 m-2"
                             >
                                 <div className="flex justify-between items-start">
                                     <div className="font-semibold">
                                         {course.code ?? "not found"} – {course.title}
                                     </div>
                                     <div>
+                                        {course.mandatory === "Optional" ?
                                         <Button
                                             variant="ghost"
                                             size="icon"
@@ -288,6 +313,8 @@ export default function Planner() {
                                         >
                                             <Trash />
                                         </Button>
+
+                                        : <span></span>}
                                     </div>
                                 </div>
                                 {course.prerequisites_list && (
@@ -359,7 +386,7 @@ export default function Planner() {
                         >
                             <option value="">Select Program</option>
                             {Object.values(programs).map((prog) => (
-                                <option key={prog.code} value={prog.code}>
+                                <option key={prog.program_id} value={prog.program_id}>
                                     {prog.title}
                                 </option>
                             ))}

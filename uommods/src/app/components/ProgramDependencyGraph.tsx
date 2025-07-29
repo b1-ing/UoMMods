@@ -17,7 +17,7 @@ const supabase = createClient(
 
 type Props = {
     selectedCourseId: string;
-    Program: string;
+    program_id: string;
 
 }
 
@@ -28,7 +28,7 @@ type Style = {
     strokeDasharray?: string;
 }
 
-export default function CourseFlow({selectedCourseId, Program}: Props) {
+export default function CourseFlow({selectedCourseId, program_id}: Props) {
     const [nodes, setNodes, onNodesChange] = useNodesState([]);
     const [edges, setEdges, onEdgesChange] = useEdgesState([]);
     const [loading, setLoading] = useState(true);
@@ -65,7 +65,23 @@ export default function CourseFlow({selectedCourseId, Program}: Props) {
 
     useEffect(() => {
         const fetchCourses = async () => {
-            const { data: courses, error } = await supabase.from('courses').select('*');
+            const { data: courses, error } = await supabase
+                .from('course_programs')
+                .select(`
+    course_code,
+    courses (
+    mandatory,
+      code,
+      title,
+      level,
+      prerequisites_list,
+      corequisites_list
+    )
+  `)
+                .eq('program_id', program_id);
+
+
+
 
             if (error) {
                 console.error('Error fetching courses:', error);
@@ -74,9 +90,13 @@ export default function CourseFlow({selectedCourseId, Program}: Props) {
 
             // Filter out compulsory modules
 
-                const filteredCourses = courses.filter((c: Course) => c.mandatory === "Optional");
+            const filteredCourses = courses
+                .filter((c) => c.courses)
+                .map((c) => ({
+                    ...c.courses,
+                }));
 
-
+            console.log(filteredCourses);
             const levelMap: Record<number, Course[]> = { 1: [], 2: [], 3: [] };
             filteredCourses.forEach((c: Course) => {
                 if (levelMap[c.level]) {

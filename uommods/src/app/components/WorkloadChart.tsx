@@ -13,16 +13,12 @@ type WorkloadItem = {
     color: string;
 };
 
-const COLUMN_STYLE: Record<string, { label: string; color: string }> = {
-    scheduled_lectures: { label: "Lectures", color: "bg-blue-500" },
-    scheduled_practical_classes__workshops: { label: "Workshops", color: "bg-green-500" },
-    scheduled_project_supervision: { label: "Project Supervision", color: "bg-yellow-500" },
-    scheduled_supervised_time_in_studiowksp: { label: "Supervised Studio", color: "bg-orange-500" },
-    scheduled_tutorials: { label: "Tutorials", color: "bg-pink-500" },
-    scheduled_demonstration: { label: "Demonstration", color: "bg-teal-500" },
-    independent_independent_study: { label: "Independent Study", color: "bg-purple-500" },
-};
-
+const COLORS = [
+    "bg-blue-500", "bg-green-500", "bg-yellow-500", "bg-orange-500",
+    "bg-pink-500", "bg-teal-500", "bg-purple-500", "bg-red-500",
+    "bg-cyan-500", "bg-lime-500", "bg-indigo-500", "bg-rose-500",
+    "bg-emerald-500", "bg-fuchsia-500", "bg-violet-500"
+];
 
 export default function WorkloadChart({ courseCode }: Props) {
     const [workload, setWorkload] = useState<WorkloadItem[]>([]);
@@ -32,29 +28,31 @@ export default function WorkloadChart({ courseCode }: Props) {
     useEffect(() => {
         const fetchData = async () => {
             setLoading(true);
-            const { data: course, error } = await supabase
-                .from('courses')
-                .select('*')
-                .eq('code', courseCode)
-                .single();
 
-            if (error || !course) {
+            const { data, error } = await supabase
+                .from('course_schedule')
+                .select(`
+                    hours,
+                    schedule_types (
+                        name
+                    )
+                `)
+                .eq('course_code', courseCode);
+
+            if (error || !data) {
                 console.error('❌ Failed to fetch course workload:', error);
                 setLoading(false);
                 return;
             }
 
-            const items: WorkloadItem[] = Object.entries(COLUMN_STYLE)
-                .map(([column, { label, color }]) => ({
-                    label,
-                    hours: Number(course[column]) || 0,
-                    color,
-                }))
-                .filter(item => item.hours > 0);
-
+            const items: WorkloadItem[] = data.map((entry, index) => ({
+                label: entry.schedule_types.name,
+                hours: entry.hours || 0,
+                color: COLORS[index % COLORS.length]
+            })).filter(item => item.hours > 0);
 
             setWorkload(items);
-            setTotalHours(items.reduce((sum, item) => sum + item.hours, 0));
+            setTotalHours(items.reduce((sum, item) => sum + Math.round(item.hours), 0));
             setLoading(false);
         };
 
@@ -75,21 +73,23 @@ export default function WorkloadChart({ courseCode }: Props) {
         <div className="space-y-4">
             <h2 className="text-lg font-semibold">Weekly Workload ({totalHours} hrs)</h2>
 
+            {/* Progress bar with hover tooltips */}
             <div className="flex flex-wrap gap-1">
                 {boxes.map((box, index) => (
                     <div
                         key={index}
-                        className={`w-6 h-6 rounded ${box.color}`}
+                        className={`w-6 h-6 rounded ${box.color} transition duration-200 hover:scale-110`}
                         title={box.label}
                     />
                 ))}
             </div>
 
+            {/* Legend */}
             <div className="flex flex-wrap gap-4 mt-4 text-sm">
                 {workload.map((item) => (
                     <div key={item.label} className="flex items-center gap-2">
                         <div className={`w-4 h-4 rounded ${item.color}`} />
-                        <span>{item.label} ({item.hours} hrs)</span>
+                        <span>{item.label} ({Math.round(item.hours)} hrs)</span>
                     </div>
                 ))}
             </div>

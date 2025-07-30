@@ -75,11 +75,11 @@ export default function Planner() {
                                 };
                             }
                         });
-                    } else if (courses?.code) {
-                        // fallback in case it's not an array
-                        courseMap[courses.code] = {
-                            ...courses,
-                            code: courses.code,
+                    } else if (courses && typeof courses === 'object' && 'code' in courses) {
+                        const singleCourse = courses as Course;
+                        courseMap[singleCourse.code] = {
+                            ...singleCourse,
+                            code: singleCourse.code,
                         };
                     }
                 });

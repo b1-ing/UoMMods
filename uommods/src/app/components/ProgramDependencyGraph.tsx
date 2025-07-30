@@ -69,12 +69,7 @@ export default function CourseFlow({program_id}: Props) {
                 .select(`
     course_code,
     courses (
-    mandatory,
-      code,
-      title,
-      level,
-      prerequisites_list,
-      corequisites_list
+    *
     )
   `)
                 .eq('program_id', program_id);
@@ -89,14 +84,24 @@ export default function CourseFlow({program_id}: Props) {
 
             // Filter out compulsory modules
 
-            const filteredCourses = courses
-                .filter((c) => c.courses)
-                .map((c) => ({
-                    ...c.courses,
-                }));
+            // Assume: data is CourseProgramRecord[] (from Supabase)
+            const allCourses: Course[] = [];
+
+            courses.forEach((record) => {
+                const courseOrCourses = record.courses as Course | Course[];
+
+                if (Array.isArray(courseOrCourses)) {
+                    allCourses.push(...courseOrCourses);
+                } else if (courseOrCourses && courseOrCourses.code) {
+                    allCourses.push(courseOrCourses);
+                }
+            });
+
+            const filteredCourses = allCourses.filter((c): c is Course => !!c && !!c.code);
+
 
             console.log(filteredCourses);
-            const levelMap: Record<number, Course[]> = { 1: [], 2: [], 3: [] };
+            const levelMap: Record<number, Course[]> = { 1: [] as Course[], 2: []as Course[], 3: []as Course[] };
             filteredCourses.forEach((c: Course) => {
                 if (levelMap[c.level]) {
                     levelMap[c.level].push(c);

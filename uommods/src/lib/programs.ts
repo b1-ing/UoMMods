@@ -1,11 +1,13 @@
 // programs.ts
 
 export type Program = {
-  code: string;
+  program_id: string;
   title: string;
   firstyrfy: string[];
-  firstyrs1: string[];
-  firstyrs2: string[];
+  firstyrs1comp: string[];
+  firstyrs1op: string[];
+  firstyrs2comp: string[];
+  firstyrs2op: string[];
   y1yearcred: number;
   y1sem1cred: number;
   y1sem2cred: number;

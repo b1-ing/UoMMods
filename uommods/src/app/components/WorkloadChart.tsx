@@ -7,6 +7,13 @@ type Props = {
     courseCode: string;
 };
 
+
+
+type Entry = {
+    hours: number;
+    schedule_types: { name:string };
+};
+
 type WorkloadItem = {
     label: string;
     hours: number;
@@ -45,7 +52,12 @@ export default function WorkloadChart({ courseCode }: Props) {
                 return;
             }
 
-            const items: WorkloadItem[] = data.map((entry, index) => ({
+            console.log(data[0].schedule_types)
+
+
+
+
+            const items: WorkloadItem[] = (data as unknown as Entry[]).map((entry, index) => ({
                 label: entry.schedule_types.name,
                 hours: entry.hours || 0,
                 color: COLORS[index % COLORS.length]

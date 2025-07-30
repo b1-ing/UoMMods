@@ -444,14 +444,18 @@ export default function Planner() {
           </div>
         </div>
       </div>
-      <div className="hidden sm:flex flex-col sm:flex-row gap-4">
-        {renderColumn("Whole Year", "year")}
-        {renderColumn("Semester 1", "sem1")}
-        {renderColumn("Semester 2", "sem2")}
-      </div>
-      <div className="flex flex-col sm:hidden gap-4">
-        {renderColumnsMobile()}
-      </div>
+      {selectedProgramCode && selectedYear ? (
+        <>
+          <div className="hidden sm:flex flex-col sm:flex-row gap-4">
+            {renderColumn("Whole Year", "year")}
+            {renderColumn("Semester 1", "sem1")}
+            {renderColumn("Semester 2", "sem2")}
+          </div>
+          <div className="flex flex-col sm:hidden gap-4">
+            {renderColumnsMobile()}
+          </div>
+        </>
+      ) : null}
 
       {showDuplicateDialog && (
         <Dialog open={true} onOpenChange={() => setShowDuplicateDialog(false)}>

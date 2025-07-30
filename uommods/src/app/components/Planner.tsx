@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import { Program } from "@/lib/programs";
-import { Car, Trash } from "lucide-react";
+import { Trash } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -20,22 +20,17 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Course } from "@/lib/mockcourses";
-import { csProgram } from "@/lib/mockprograms";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { PrereqDisplay } from "@/app/components/PrereqDisplay";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
-import { Slider } from "@radix-ui/react-slider";
-import { Select } from "@radix-ui/react-select";
 import { Semester } from "@/lib/semesters";
 
 type ColumnType = "year" | "sem1" | "sem2";
 
 export default function Planner() {
   const [courses, setCourses] = useState<Record<string, Course>>({});
-  const [selectedProgramCode, setSelectedProgramCode] = useState<string | null>(
-    null
-  );
+  const [selectedProgramCode, setSelectedProgramCode] = useState<string>("");
   const [selectedSemester, setSelectedSemester] =
     useState<keyof typeof Semester>("sem1");
   const [selectedYear, setSelectedYear] = useState<number | "">(2);

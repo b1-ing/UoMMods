@@ -265,6 +265,7 @@ export default function Planner() {
     columns: Record<Year, Record<ColumnType, Course[]>>
   ): boolean {
     if (year === "") throw Error("Year not selected");
+    console.log(year)
     return Object.values(columns[year]!).some((column) =>
       column.some((course) => course?.code === code)
     );
@@ -310,10 +311,11 @@ export default function Planner() {
       ? (program[key as keyof Program] as number)
       : 0;
     if (selectedYear === "") throw Error("Year not selected");
-    const currentCredits = columns[selectedYear][type].reduce(
-      (sum, course) => sum + (course?.credits || 0),
-      0
-    );
+    console.log(type)
+    const yearColumns = columns[selectedYear];
+    const currentCredits = yearColumns?.[type]
+        ? yearColumns[type].reduce((sum, course) => sum + (course?.credits ?? 0), 0)
+        : 0;
 
     return (
       <Card className="w-full sm:w-1/3 p-4 flex flex-col gap-4 m-1">
@@ -388,7 +390,7 @@ export default function Planner() {
                     <Card
                       key={course.code}
                       className="p-2 cursor-pointer hover:bg-muted"
-                      onClick={() => addCourseToColumn(course, type)}
+                      onClick={() => addCourseToColumn(course.level, course, type)}
                     >
                       <div className="font-medium">
                         {course.code}

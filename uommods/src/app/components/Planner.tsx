@@ -27,14 +27,14 @@ import { supabase } from "@/lib/supabase";
 import { Semester } from "@/lib/semesters";
 
 type ColumnType = "year" | "sem1" | "sem2";
-type Year = 1 | 2 | 3 | 4;
+export type Year = 1 | 2 | 3 | 4;
 
 export default function Planner() {
   const [courses, setCourses] = useState<Record<string, Course>>({});
   const [selectedProgramCode, setSelectedProgramCode] = useState<string>("");
   const [selectedSemester, setSelectedSemester] =
     useState<keyof typeof Semester>("sem1");
-  const [selectedYear, setSelectedYear] = useState<Year | "">(2);
+  const [selectedYear, setSelectedYear] = useState<Year>(2);
   const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
   const [pendingCourse, setPendingCourse] = useState<Course | null>(null);
   const [missingPrereqs, setMissingPrereqs] = useState<Course[]>([]);
@@ -70,7 +70,6 @@ export default function Planner() {
 
   useEffect(() => {
     const fetchCourses = async () => {
-      console.log(selectedProgramCode);
       const { data } = await supabase
         .from("course_programs")
         .select(
@@ -114,10 +113,6 @@ export default function Planner() {
   }, [selectedProgramCode]);
 
   useEffect(() => {
-    console.log(courses);
-  }, [courses]);
-
-  useEffect(() => {
     const fetchPrograms = async () => {
       const { data, error } = await supabase.from("programs").select("*");
 
@@ -138,22 +133,15 @@ export default function Planner() {
     fetchPrograms();
   }, []);
 
-  useEffect(() => {
-    console.log(programs);
-  }, [programs]);
-
   const updateColumns = (
-    year: Year | "",
+    year: Year,
     column: ColumnType,
     course: Course | null
   ) => {
-    if (year === "") {
-      throw Error("Year not selected");
-    }
     setColumns((prev) => {
       return {
         ...prev,
-        [year]: { [column]: [...prev[year][column], course] },
+        [year]: { ...prev[year], [column]: [...prev[year][column], course] },
       };
     });
   };
@@ -182,10 +170,9 @@ export default function Planner() {
       setPendingColumn(column);
       setMissingPrereqs(missing);
       setPrereqDialogOpen(true);
-      console.log(pendingColumn, pendingCourse);
       return;
     } else {
-      updateColumns(selectedYear, pendingColumn, pendingCourse);
+      updateColumns(year, column, course);
     }
 
     setOpenDrawer(null);
@@ -239,7 +226,6 @@ export default function Planner() {
 
   const removeCourseFromColumn = (course: Course, column: ColumnType) => {
     setColumns((prev) => {
-      if (selectedYear === "") return prev;
       const updated = {
         ...prev,
         [selectedYear]: {
@@ -249,23 +235,18 @@ export default function Planner() {
           ),
         },
       };
-      console.log("Adding course to column:", column);
-      console.log("Updated columns:", updated);
       return updated;
     });
     setOpenDrawer(null);
   };
   function splitCourseCodes(codes: string): string[] {
-    console.log(codes);
     return codes.split(",");
   }
   function courseExistsInColumns(
-    year: Year | "",
+    year: Year,
     code: string,
     columns: Record<Year, Record<ColumnType, Course[]>>
   ): boolean {
-    if (year === "") throw Error("Year not selected");
-    console.log(year)
     return Object.values(columns[year]!).some((column) =>
       column.some((course) => course?.code === code)
     );
@@ -306,16 +287,16 @@ export default function Planner() {
   const renderColumn = (label: string | null, type: ColumnType) => {
     const key = `y${selectedYear}${type}cred` as keyof Program;
     const program = programs[selectedProgramCode];
-    console.log(program);
     const requiredCredits = program
       ? (program[key as keyof Program] as number)
       : 0;
-    if (selectedYear === "") throw Error("Year not selected");
-    console.log(type)
     const yearColumns = columns[selectedYear];
     const currentCredits = yearColumns?.[type]
-        ? yearColumns[type].reduce((sum, course) => sum + (course?.credits ?? 0), 0)
-        : 0;
+      ? yearColumns[type].reduce(
+          (sum, course) => sum + (course?.credits ?? 0),
+          0
+        )
+      : 0;
 
     return (
       <Card className="w-full sm:w-1/3 p-4 flex flex-col gap-4 m-1">
@@ -330,7 +311,7 @@ export default function Planner() {
         </div>
 
         <CardContent className="space-y-2 p-2">
-          {columns[selectedYear][type].map((course) =>
+          {(columns[selectedYear][type] ?? []).map((course) =>
             course ? (
               <Link
                 href={`/route/${course.code}`}
@@ -390,7 +371,9 @@ export default function Planner() {
                     <Card
                       key={course.code}
                       className="p-2 cursor-pointer hover:bg-muted"
-                      onClick={() => addCourseToColumn(course.level, course, type)}
+                      onClick={() =>
+                        addCourseToColumn(course.level as Year, course, type)
+                      }
                     >
                       <div className="font-medium">
                         {course.code}
@@ -415,7 +398,6 @@ export default function Planner() {
       </Card>
     );
   };
-  console.log(Semester.year);
 
   const renderColumnsMobile = () => {
     return (
@@ -464,7 +446,7 @@ export default function Planner() {
             <select
               className="border rounded px-3 py-2"
               value={selectedYear}
-              onChange={(e) => setSelectedYear(Number(e.target.value))}
+              onChange={(e) => setSelectedYear(Number(e.target.value) as Year)}
             >
               <option value="">Select Year</option>
               {[1, 2, 3, 4].map((year) => (

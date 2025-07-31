@@ -1,5 +1,7 @@
 // mockCourses.ts
 
+import type { Year } from "@/app/components/Planner";
+
 export type Course = {
   code: string;
   title: string;
@@ -9,7 +11,7 @@ export type Course = {
   description: string;
   faculty: string;
   semesters: string;
-  level: number;
+  level: Year;
 
   // Assessment methods
   assessment_assessment_task?: number;

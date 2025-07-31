@@ -27,13 +27,14 @@ import { supabase } from "@/lib/supabase";
 import { Semester } from "@/lib/semesters";
 
 type ColumnType = "year" | "sem1" | "sem2";
+type Year = 1 | 2 | 3 | 4;
 
 export default function Planner() {
   const [courses, setCourses] = useState<Record<string, Course>>({});
   const [selectedProgramCode, setSelectedProgramCode] = useState<string>("");
   const [selectedSemester, setSelectedSemester] =
     useState<keyof typeof Semester>("sem1");
-  const [selectedYear, setSelectedYear] = useState<number | "">(2);
+  const [selectedYear, setSelectedYear] = useState<Year | "">(2);
   const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
   const [pendingCourse, setPendingCourse] = useState<Course | null>(null);
   const [missingPrereqs, setMissingPrereqs] = useState<Course[]>([]);
@@ -41,10 +42,29 @@ export default function Planner() {
   const [pendingColumn, setPendingColumn] = useState<ColumnType>("year");
 
   const [openDrawer, setOpenDrawer] = useState<ColumnType | null>(null);
-  const [columns, setColumns] = useState<Record<ColumnType, Course[]>>({
-    year: [],
-    sem1: [],
-    sem2: [],
+  const [columns, setColumns] = useState<
+    Record<Year, Record<ColumnType, Course[]>>
+  >({
+    1: {
+      year: [],
+      sem1: [],
+      sem2: [],
+    },
+    2: {
+      year: [],
+      sem1: [],
+      sem2: [],
+    },
+    3: {
+      year: [],
+      sem1: [],
+      sem2: [],
+    },
+    4: {
+      year: [],
+      sem1: [],
+      sem2: [],
+    },
   });
   const [programs, setPrograms] = useState<Record<string, Program>>({});
 
@@ -122,8 +142,27 @@ export default function Planner() {
     console.log(programs);
   }, [programs]);
 
-  const addCourseToColumn = (course: Course, column: ColumnType) => {
-    if (courseExistsInColumns(course.code, columns)) {
+  const updateColumns = (
+    year: Year | "",
+    column: ColumnType,
+    course: Course | null
+  ) => {
+    if (year === "") {
+      throw Error("Year not selected");
+    }
+    setColumns((prev) => {
+      return {
+        ...prev,
+        [year]: { [column]: [...prev[year][column], course] },
+      };
+    });
+  };
+  const addCourseToColumn = (
+    year: Year,
+    course: Course,
+    column: ColumnType
+  ) => {
+    if (courseExistsInColumns(year, course.code, columns)) {
       setOpenDrawer(null);
       setShowDuplicateDialog(true);
       return;
@@ -134,7 +173,7 @@ export default function Planner() {
       : [];
 
     const missing = prereqCodes
-      .filter((code) => !courseExistsInColumns(code, columns))
+      .filter((code) => !courseExistsInColumns(year, code, columns))
       .map((code) => courses[code])
       .filter(Boolean);
 
@@ -146,15 +185,7 @@ export default function Planner() {
       console.log(pendingColumn, pendingCourse);
       return;
     } else {
-      setColumns((prev) => {
-        const updated = {
-          ...prev,
-          [column]: [...prev[column], course],
-        };
-        console.log("Adding course to column:", column);
-        console.log("Updated columns:", updated);
-        return updated;
-      });
+      updateColumns(selectedYear, pendingColumn, pendingCourse);
     }
 
     setOpenDrawer(null);
@@ -195,7 +226,9 @@ export default function Planner() {
         return;
     }
 
-    setColumns(newColumns);
+    setColumns((prev) => {
+      return { ...prev, [selectedYear]: newColumns };
+    });
   }, [selectedProgramCode, selectedYear, courses, programs]);
 
   useEffect(() => {
@@ -206,9 +239,15 @@ export default function Planner() {
 
   const removeCourseFromColumn = (course: Course, column: ColumnType) => {
     setColumns((prev) => {
+      if (selectedYear === "") return prev;
       const updated = {
         ...prev,
-        [column]: prev[column].filter((c) => c.code !== course.code),
+        [selectedYear]: {
+          ...prev[selectedYear],
+          [column]: prev[selectedYear][column].filter(
+            (c) => c.code !== course.code
+          ),
+        },
       };
       console.log("Adding course to column:", column);
       console.log("Updated columns:", updated);
@@ -221,10 +260,12 @@ export default function Planner() {
     return codes.split(",");
   }
   function courseExistsInColumns(
+    year: Year | "",
     code: string,
-    columns: Record<ColumnType, Course[]>
+    columns: Record<Year, Record<ColumnType, Course[]>>
   ): boolean {
-    return Object.values(columns).some((column) =>
+    if (year === "") throw Error("Year not selected");
+    return Object.values(columns[year]!).some((column) =>
       column.some((course) => course?.code === code)
     );
   }
@@ -268,8 +309,8 @@ export default function Planner() {
     const requiredCredits = program
       ? (program[key as keyof Program] as number)
       : 0;
-
-    const currentCredits = columns[type].reduce(
+    if (selectedYear === "") throw Error("Year not selected");
+    const currentCredits = columns[selectedYear][type].reduce(
       (sum, course) => sum + (course?.credits || 0),
       0
     );
@@ -287,7 +328,7 @@ export default function Planner() {
         </div>
 
         <CardContent className="space-y-2 p-2">
-          {columns[type].map((course) =>
+          {columns[selectedYear][type].map((course) =>
             course ? (
               <Link
                 href={`/route/${course.code}`}
@@ -319,7 +360,7 @@ export default function Planner() {
                     <PrereqDisplay
                       prerequisites={course.prerequisites_list}
                       corequisites={course.corequisites_list}
-                      columns={columns}
+                      columns={columns[selectedYear]}
                     />
                   )}
                   <div className="text-sm text-muted-foreground">
@@ -359,7 +400,7 @@ export default function Planner() {
                         <PrereqDisplay
                           prerequisites={course.prerequisites_list}
                           corequisites={course.corequisites_list}
-                          columns={columns}
+                          columns={columns[selectedYear]}
                         />
                       )}
                     </Card>
@@ -487,10 +528,7 @@ export default function Planner() {
               onClick={() => {
                 if (!pendingCourse) return;
                 if (pendingCourse && pendingColumn) {
-                  setColumns((prev) => ({
-                    ...prev,
-                    [pendingColumn]: [...prev[pendingColumn], pendingCourse],
-                  }));
+                  updateColumns(selectedYear, pendingColumn, pendingCourse);
                 }
 
                 setPendingCourse(null);
@@ -505,10 +543,7 @@ export default function Planner() {
               onClick={() => {
                 if (!pendingCourse) return;
                 if (pendingCourse && pendingColumn) {
-                  setColumns((prev) => ({
-                    ...prev,
-                    [pendingColumn]: [...prev[pendingColumn], pendingCourse],
-                  }));
+                  updateColumns(selectedYear, pendingColumn, pendingCourse);
                 }
                 missingPrereqs.forEach((prereqCourse) => {
                   if (!prereqCourse) return;

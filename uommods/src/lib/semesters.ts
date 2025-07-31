@@ -1,5 +1,5 @@
 export enum Semester {
-  year = "Whole Year",
+  year = "Year-Long",
   sem1 = "First Semester",
   sem2 = "Second Semester",
 }

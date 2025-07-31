@@ -442,7 +442,7 @@ export default function Planner() {
       {selectedProgramCode && selectedYear ? (
         <>
           <div className="hidden sm:flex flex-col sm:flex-row gap-4">
-            {renderColumn("Whole Year", "year")}
+            {renderColumn("Year-Long", "year")}
             {renderColumn("Semester 1", "sem1")}
             {renderColumn("Semester 2", "sem2")}
           </div>

@@ -31,10 +31,14 @@ export type Year = 1 | 2 | 3 | 4;
 
 export default function Planner() {
   const [courses, setCourses] = useState<Record<string, Course>>({});
-  const [selectedProgramCode, setSelectedProgramCode] = useState<string>("");
+  const [selectedProgramCode, setSelectedProgramCode] = useState<string>(
+    localStorage.getItem("selectedProgramCode") ?? ""
+  );
   const [selectedSemester, setSelectedSemester] =
     useState<keyof typeof Semester>("sem1");
-  const [selectedYear, setSelectedYear] = useState<Year>(2);
+  const [selectedYear, setSelectedYear] = useState<Year>(
+    Number(localStorage.getItem("selectedYear") ?? 2) as Year
+  );
   const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
   const [pendingCourse, setPendingCourse] = useState<Course | null>(null);
   const [missingPrereqs, setMissingPrereqs] = useState<Course[]>([]);
@@ -44,94 +48,146 @@ export default function Planner() {
   const [openDrawer, setOpenDrawer] = useState<ColumnType | null>(null);
   const [columns, setColumns] = useState<
     Record<Year, Record<ColumnType, Course[]>>
-  >({
-    1: {
-      year: [],
-      sem1: [],
-      sem2: [],
-    },
-    2: {
-      year: [],
-      sem1: [],
-      sem2: [],
-    },
-    3: {
-      year: [],
-      sem1: [],
-      sem2: [],
-    },
-    4: {
-      year: [],
-      sem1: [],
-      sem2: [],
-    },
-  });
+  >(
+    JSON.parse(localStorage.getItem("columns") ?? "") ?? {
+      1: {
+        year: [],
+        sem1: [],
+        sem2: [],
+      },
+      2: {
+        year: [],
+        sem1: [],
+        sem2: [],
+      },
+      3: {
+        year: [],
+        sem1: [],
+        sem2: [],
+      },
+      4: {
+        year: [],
+        sem1: [],
+        sem2: [],
+      },
+    }
+  );
   const [programs, setPrograms] = useState<Record<string, Program>>({});
 
-  useEffect(() => {
-    const fetchCourses = async () => {
-      const { data } = await supabase
-        .from("course_programs")
-        .select(
-          `
-            course_code,
-            courses (
-            *)`
-        )
-        .eq("program_id", selectedProgramCode);
-      const courseMap: Record<string, Course> = {};
-      if (data) {
-        data.forEach((record) => {
-          const courses = record.courses;
-          if (Array.isArray(courses)) {
-            courses.forEach((course) => {
-              if (course?.code) {
-                courseMap[course.code] = {
-                  ...course,
-                  code: course.code,
-                };
-              }
-            });
-          } else if (
-            courses &&
-            typeof courses === "object" &&
-            "code" in courses
-          ) {
-            const singleCourse = courses as Course;
-            courseMap[singleCourse.code] = {
-              ...singleCourse,
-              code: singleCourse.code,
-            };
-          }
-        });
+  const fetchCourses = async () => {
+    const { data } = await supabase
+      .from("course_programs")
+      .select(
+        `
+          course_code,
+          courses (
+          *)`
+      )
+      .eq("program_id", selectedProgramCode);
+    const courseMap: Record<string, Course> = {};
+    if (data) {
+      data.forEach((record) => {
+        const courses = record.courses;
+        if (Array.isArray(courses)) {
+          courses.forEach((course) => {
+            if (course?.code) {
+              courseMap[course.code] = {
+                ...course,
+                code: course.code,
+              };
+            }
+          });
+        } else if (
+          courses &&
+          typeof courses === "object" &&
+          "code" in courses
+        ) {
+          const singleCourse = courses as Course;
+          courseMap[singleCourse.code] = {
+            ...singleCourse,
+            code: singleCourse.code,
+          };
+        }
+      });
+    }
+
+    setCourses(courseMap);
+  };
+
+  const fetchPrograms = async () => {
+    const { data, error } = await supabase.from("programs").select("*");
+
+    if (error) {
+      console.error("Error fetching programs:", error);
+      return;
+    }
+
+    // Convert array to object for easier access
+    const programMap: Record<string, Program> = {};
+    data?.forEach((program) => {
+      programMap[program.program_id] = program;
+    });
+
+    setPrograms(programMap);
+  };
+
+  const storePreferences = async () => {
+    localStorage.setItem("selectedYear", selectedYear.toString());
+    localStorage.setItem("selectedProgramCode", selectedProgramCode.toString());
+    localStorage.setItem("columns", JSON.stringify(columns));
+  };
+
+  const fetchPreferences = async () => {
+    setSelectedYear(
+      (prev) => Number(localStorage.getItem("selectedYear") ?? prev) as Year
+    );
+    setSelectedProgramCode(
+      (prev) => localStorage.getItem("selectedProgramCode") ?? prev
+    );
+    setColumns(
+      (prev) => JSON.parse(localStorage.getItem("columns") ?? "") ?? prev
+    );
+  };
+
+  const handleAddWithPrereqs = () => {
+    if (!pendingCourse) return;
+    if (pendingCourse && pendingColumn) {
+      updateColumns(selectedYear, pendingColumn, pendingCourse);
+    }
+    missingPrereqs.forEach((prereqCourse) => {
+      if (!prereqCourse) return;
+
+      // Decide which column based on its semester
+      const semesters = prereqCourse.semesters ?? [];
+
+      let targetColumn: ColumnType | null = null;
+      if (semesters.includes("Full year")) targetColumn = "year";
+      else if (semesters.includes("Semester 1")) targetColumn = "sem1";
+      else if (semesters.includes("Semester 2")) targetColumn = "sem2";
+
+      if (targetColumn) {
+        addCourseToColumn(selectedYear, prereqCourse, targetColumn);
       }
+    });
 
-      setCourses(courseMap);
-    };
+    setPendingCourse(null);
+    setMissingPrereqs([]);
+    setPrereqDialogOpen(false);
+    setOpenDrawer(null);
+  };
 
+  useEffect(() => {
     fetchCourses();
   }, [selectedProgramCode]);
 
   useEffect(() => {
-    const fetchPrograms = async () => {
-      const { data, error } = await supabase.from("programs").select("*");
-
-      if (error) {
-        console.error("Error fetching programs:", error);
-        return;
-      }
-
-      // Convert array to object for easier access
-      const programMap: Record<string, Program> = {};
-      data?.forEach((program) => {
-        programMap[program.program_id] = program;
-      });
-
-      setPrograms(programMap);
-    };
-
+    fetchPreferences();
     fetchPrograms();
   }, []);
+
+  useEffect(() => {
+    storePreferences();
+  }, [selectedYear, selectedProgramCode, columns]);
 
   const updateColumns = (
     year: Year,
@@ -183,9 +239,9 @@ export default function Planner() {
     if (!program || !selectedYear) return;
 
     const newColumns: Record<ColumnType, Course[]> = {
-      year: [],
-      sem1: [],
-      sem2: [],
+      year: [...columns[selectedYear]["year"]],
+      sem1: [...columns[selectedYear]["sem1"]],
+      sem2: [...columns[selectedYear]["sem2"]],
     };
 
     const toCourse = (code: string): Course | null => courses[code] ?? null;
@@ -214,7 +270,10 @@ export default function Planner() {
     }
 
     setColumns((prev) => {
-      return { ...prev, [selectedYear]: newColumns };
+      return {
+        ...prev,
+        [selectedYear]: { ...prev[selectedYear], ...newColumns },
+      };
     });
   }, [selectedProgramCode, selectedYear, courses, programs]);
 
@@ -222,7 +281,7 @@ export default function Planner() {
     if (selectedProgramCode && selectedYear) {
       addCompulsoryCourses();
     }
-  }, [selectedProgramCode, selectedYear, addCompulsoryCourses]);
+  }, [selectedProgramCode, selectedYear]);
 
   const removeCourseFromColumn = (course: Course, column: ColumnType) => {
     setColumns((prev) => {
@@ -457,11 +516,7 @@ export default function Planner() {
             </select>
           </div>
 
-          <div className="flex items-end">
-            {/*<Button onClick={addCompulsoryCourses} disabled={!selectedProgramCode || !selectedYear}>*/}
-            {/*    Load*/}
-            {/*</Button>*/}
-          </div>
+          <div className="flex items-end"></div>
         </div>
       </div>
       {selectedProgramCode && selectedYear ? (
@@ -495,7 +550,7 @@ export default function Planner() {
             <DialogTitle>Missing Prerequisites</DialogTitle>
             <div>
               {pendingCourse?.code} has unmet prerequisites:
-              <ul className="mt-2 list-disc ml-4">
+              <ul className="mt-2 list-disc ml-4 text-muted-foreground">
                 {missingPrereqs.map((c) => (
                   <li key={c.code}>
                     {c.code} – {c.title}
@@ -524,37 +579,8 @@ export default function Planner() {
             >
               Add Course Only
             </Button>
-            <Button
-              onClick={() => {
-                if (!pendingCourse) return;
-                if (pendingCourse && pendingColumn) {
-                  updateColumns(selectedYear, pendingColumn, pendingCourse);
-                }
-                missingPrereqs.forEach((prereqCourse) => {
-                  if (!prereqCourse) return;
-
-                  // Decide which column based on its semester
-                  const semesters = prereqCourse.semesters ?? [];
-
-                  let targetColumn: ColumnType | null = null;
-                  if (semesters.includes("Full year")) targetColumn = "year";
-                  else if (semesters.includes("Semester 1"))
-                    targetColumn = "sem1";
-                  else if (semesters.includes("Semester 2"))
-                    targetColumn = "sem2";
-
-                  if (targetColumn) {
-                    addCourseToColumn(prereqCourse, targetColumn);
-                  }
-                });
-
-                setPendingCourse(null);
-                setMissingPrereqs([]);
-                setPrereqDialogOpen(false);
-                setOpenDrawer(null);
-              }}
-            >
-              Add Course + Prereqs
+            <Button onClick={handleAddWithPrereqs}>
+              Add with Prerequisites
             </Button>
           </div>
         </DialogContent>

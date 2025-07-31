@@ -328,7 +328,7 @@ export default function Planner() {
                           variant="ghost"
                           size="icon"
                           onClick={(e) => {
-                            e.stopPropagation();
+                            e.preventDefault();
                             removeCourseFromColumn(course, type);
                           }}
                         >
@@ -493,7 +493,7 @@ export default function Planner() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Missing Prerequisites</DialogTitle>
-            <DialogDescription>
+            <div>
               {pendingCourse?.code} has unmet prerequisites:
               <ul className="mt-2 list-disc ml-4">
                 {missingPrereqs.map((c) => (
@@ -502,9 +502,10 @@ export default function Planner() {
                   </li>
                 ))}
               </ul>
+              <br />
               Would you like to add just the course, or both the course and
               prerequisites?
-            </DialogDescription>
+            </div>
           </DialogHeader>
           <div className="flex justify-end gap-2 mt-4">
             <Button

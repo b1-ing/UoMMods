@@ -49,7 +49,7 @@ export default function Planner() {
   const [columns, setColumns] = useState<
     Record<Year, Record<ColumnType, Course[]>>
   >(
-    JSON.parse(localStorage.getItem("columns") ?? "") ?? {
+    JSON.parse(localStorage.getItem("columns") ?? "null") ?? {
       1: {
         year: [],
         sem1: [],

@@ -145,7 +145,7 @@ export default function Planner() {
       (prev) => localStorage.getItem("selectedProgramCode") ?? prev
     );
     setColumns(
-      (prev) => JSON.parse(localStorage.getItem("columns") ?? "") ?? prev
+      (prev) => JSON.parse(localStorage.getItem("columns") ?? "null") ?? prev
     );
   };
 
@@ -177,17 +177,23 @@ export default function Planner() {
   };
 
   useEffect(() => {
-    fetchCourses();
-  }, [selectedProgramCode]);
-
-  useEffect(() => {
     fetchPreferences();
     fetchPrograms();
   }, []);
 
   useEffect(() => {
+    fetchCourses();
+  }, [selectedProgramCode]);
+
+  useEffect(() => {
     storePreferences();
   }, [selectedYear, selectedProgramCode, columns]);
+
+  useEffect(() => {
+    if (selectedProgramCode && selectedYear && courses) {
+      addCompulsoryCourses();
+    }
+  }, [selectedProgramCode, selectedYear, courses]);
 
   const updateColumns = (
     year: Year,
@@ -276,12 +282,6 @@ export default function Planner() {
       };
     });
   }, [selectedProgramCode, selectedYear, courses, programs]);
-
-  useEffect(() => {
-    if (selectedProgramCode && selectedYear) {
-      addCompulsoryCourses();
-    }
-  }, [selectedProgramCode, selectedYear]);
 
   const removeCourseFromColumn = (course: Course, column: ColumnType) => {
     setColumns((prev) => {

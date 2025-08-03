@@ -96,7 +96,7 @@ export default function PrivacyPolicyPage() {
         <h2>Changes to This Policy</h2>
         <p>
           We may update this policy from time to time. Significant changes will
-          be reflected by updating the "Last updated" date above.
+          be reflected by updating the &quot;Last updated&quot; date above.
         </p>
         <h2>Contact</h2>
         <p>
@@ -112,9 +112,9 @@ export default function PrivacyPolicyPage() {
           <br />
           <br />
           <br />
-          <a href="/" className="underline text-blue-500">
+          <Link href="/" className="underline text-blue-500">
             back to site
-          </a>
+          </Link>
         </p>
       </div>
     </main>

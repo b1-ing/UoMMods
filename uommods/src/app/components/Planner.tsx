@@ -183,11 +183,11 @@ export default function Planner() {
 
   useEffect(() => {
     fetchCourses();
-  }, [selectedProgramCode]);
+  }, [selectedProgramCode, fetchCourses]);
 
   useEffect(() => {
     storePreferences();
-  }, [selectedYear, selectedProgramCode, columns]);
+  }, [selectedYear, selectedProgramCode, columns, storePreferences]);
 
   useEffect(() => {
     if (selectedProgramCode && selectedYear && courses) {
@@ -281,7 +281,7 @@ export default function Planner() {
         [selectedYear]: { ...prev[selectedYear], ...newColumns },
       };
     });
-  }, [selectedProgramCode, selectedYear, courses, programs]);
+  }, [selectedProgramCode, selectedYear, courses, programs, columns]);
 
   const removeCourseFromColumn = (course: Course, column: ColumnType) => {
     setColumns((prev) => {

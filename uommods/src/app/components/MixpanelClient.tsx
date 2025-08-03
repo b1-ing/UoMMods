@@ -10,11 +10,7 @@ import {
   DialogOverlay,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  DialogClose,
-  DialogPortal,
-  DialogTrigger,
-} from "@radix-ui/react-dialog";
+import { DialogClose, DialogPortal } from "@radix-ui/react-dialog";
 import { usePathname } from "next/dist/client/components/navigation";
 
 const EXCLUDED_PATHS = ["/privacy", "/login", "/logout"];
@@ -28,6 +24,7 @@ export default function CookieConsent() {
 
   const [modalOpen, setModalOpen] = useState<boolean>(true);
   const initializedRef = useRef(false);
+  const pathname = usePathname();
 
   if (!token) {
     console.warn("MP token unset");
@@ -57,7 +54,6 @@ export default function CookieConsent() {
       ignore_dnt: true,
     });
   }
-  const pathname = usePathname();
   const excludedPage = EXCLUDED_PATHS.some((p) => pathname?.startsWith(p));
 
   if (consent || excludedPage) {

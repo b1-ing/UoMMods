@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import { Program } from "@/lib/programs";
-import { Trash } from "lucide-react";
+import { RefreshCwIcon, Trash } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -28,6 +28,28 @@ import { Semester } from "@/lib/semesters";
 
 type ColumnType = "year" | "sem1" | "sem2";
 export type Year = 1 | 2 | 3 | 4;
+const defaultColumns = {
+  1: {
+    year: [],
+    sem1: [],
+    sem2: [],
+  },
+  2: {
+    year: [],
+    sem1: [],
+    sem2: [],
+  },
+  3: {
+    year: [],
+    sem1: [],
+    sem2: [],
+  },
+  4: {
+    year: [],
+    sem1: [],
+    sem2: [],
+  },
+};
 
 export default function Planner() {
   const [courses, setCourses] = useState<Record<string, Course>>({});
@@ -48,31 +70,17 @@ export default function Planner() {
   const [openDrawer, setOpenDrawer] = useState<ColumnType | null>(null);
   const [columns, setColumns] = useState<
     Record<Year, Record<ColumnType, Course[]>>
-  >(
-    JSON.parse(localStorage.getItem("columns") ?? "null") ?? {
-      1: {
-        year: [],
-        sem1: [],
-        sem2: [],
-      },
-      2: {
-        year: [],
-        sem1: [],
-        sem2: [],
-      },
-      3: {
-        year: [],
-        sem1: [],
-        sem2: [],
-      },
-      4: {
-        year: [],
-        sem1: [],
-        sem2: [],
-      },
-    }
-  );
+  >(JSON.parse(localStorage.getItem("columns") ?? "null") ?? defaultColumns);
   const [programs, setPrograms] = useState<Record<string, Program>>({});
+
+  const resetColumns = () => {
+    setColumns(defaultColumns);
+  };
+
+  const clearLocalStorageColumns = () => {
+    localStorage.setItem("columns", JSON.stringify(defaultColumns));
+    resetColumns();
+  };
 
   const fetchCourses = async () => {
     const { data } = await supabase
@@ -149,7 +157,6 @@ export default function Planner() {
     );
   };
 
-
   const addCompulsoryCourses = useCallback(() => {
     const program = programs[selectedProgramCode as keyof typeof programs];
     if (!program || !selectedYear) return;
@@ -163,7 +170,7 @@ export default function Planner() {
     const toCourse = (code: string): Course | null => courses[code] ?? null;
 
     const safeMap = (arr: string[]) =>
-        arr.map(toCourse).filter((course): course is Course => course !== null);
+      arr.map(toCourse).filter((course): course is Course => course !== null);
 
     switch (selectedYear) {
       case 1:
@@ -193,7 +200,6 @@ export default function Planner() {
     });
   }, [selectedProgramCode, selectedYear, courses, programs, columns]);
 
-
   const handleAddWithPrereqs = () => {
     if (!pendingCourse) return;
     if (pendingCourse && pendingColumn) {
@@ -222,6 +228,10 @@ export default function Planner() {
   };
 
   useEffect(() => {
+    resetColumns();
+  }, [selectedProgramCode]);
+
+  useEffect(() => {
     fetchPreferences();
     fetchPrograms();
   }, []);
@@ -240,14 +250,19 @@ export default function Planner() {
     // only populate compulsory courses if nothing has been added yet for that year
     const yearCols = columns[selectedYear];
     const hasAny = (["year", "sem1", "sem2"] as ColumnType[]).some(
-        (col) => yearCols[col]?.length > 0
+      (col) => yearCols[col]?.length > 0
     );
 
     if (!hasAny) {
       addCompulsoryCourses();
     }
-  }, [selectedProgramCode, selectedYear, courses, columns, addCompulsoryCourses]);
-
+  }, [
+    selectedProgramCode,
+    selectedYear,
+    courses,
+    columns,
+    addCompulsoryCourses,
+  ]);
 
   const updateColumns = (
     year: Year,
@@ -369,25 +384,27 @@ export default function Planner() {
     };
 
     const summaries: YearSummary[] = ([1, 2, 3, 4] as Year[]).map((yr) => {
-      const yearCols = columns[yr] || {
-        year: [],
-        sem1: [],
-        sem2: [],
-      } as Record<ColumnType, Course[]>;
+      const yearCols =
+        columns[yr] ||
+        ({
+          year: [],
+          sem1: [],
+          sem2: [],
+        } as Record<ColumnType, Course[]>);
 
       const columnSummaries = (["year", "sem1", "sem2"] as ColumnType[]).map(
-          (col) => {
-            const coursesInCol = yearCols[col] ?? [];
-            const totalCredits = coursesInCol.reduce(
-                (sum, c) => sum + (c?.credits ?? 0),
-                0
-            );
-            return {
-              column: col,
-              courses: coursesInCol.filter(Boolean) as Course[],
-              totalCredits,
-            };
-          }
+        (col) => {
+          const coursesInCol = yearCols[col] ?? [];
+          const totalCredits = coursesInCol.reduce(
+            (sum, c) => sum + (c?.credits ?? 0),
+            0
+          );
+          return {
+            column: col,
+            courses: coursesInCol.filter(Boolean) as Course[],
+            totalCredits,
+          };
+        }
       );
 
       return {
@@ -399,20 +416,21 @@ export default function Planner() {
     return summaries;
   }, [columns, selectedProgramCode]);
 
-
   function SummaryTableAllYears({
-                                  allSummary,
-                                  programs,
-                                  selectedProgramCode,
-                                }: {
-    allSummary: {
-      year: Year;
-      columns: {
-        column: ColumnType;
-        courses: Course[];
-        totalCredits: number;
-      }[];
-    }[] | null;
+    allSummary,
+    programs,
+    selectedProgramCode,
+  }: {
+    allSummary:
+      | {
+          year: Year;
+          columns: {
+            column: ColumnType;
+            courses: Course[];
+            totalCredits: number;
+          }[];
+        }[]
+      | null;
     programs: Record<string, Program>;
     selectedProgramCode: string;
   }) {
@@ -420,84 +438,89 @@ export default function Planner() {
     const programTitle = programs[selectedProgramCode]?.title ?? "Program";
 
     return (
-        <Card className="mt-6">
-          <div className="flex items-center justify-center gap-2">
-            <div className="flex items-baseline gap-2">
-              <CardTitle className="m-0">Full Summary for {programTitle}</CardTitle>
-              <Button size="sm" onClick={() => downloadCsv(allYearsSummary!, programTitle)}>
-                Export CSV
-              </Button>
-            </div>
+      <Card className="mt-6">
+        <div className="flex items-center justify-center gap-2">
+          <div className="flex items-baseline gap-2">
+            <CardTitle className="m-0">
+              Full Summary for {programTitle}
+            </CardTitle>
+            <Button
+              size="sm"
+              onClick={() => downloadCsv(allYearsSummary!, programTitle)}
+            >
+              Export CSV
+            </Button>
           </div>
+        </div>
 
-          <CardContent className="overflow-x-auto">
-            {allSummary.map(({ year, columns }) => (
-                <div key={year} className="mb-6">
-                  <div className="font-bold text-lg mb-2">Year {year}</div>
-                  <table className="w-full border-collapse mb-4">
-                    <thead>
-                    <tr>
-                      <th className="border p-2 text-left">Column</th>
-                      <th className="border p-2 text-left">Course Code</th>
-                      <th className="border p-2 text-left">Title</th>
-                      <th className="border p-2 text-left">Credits</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    {columns.map(({ column, courses, totalCredits }) => (
-                        <React.Fragment key={`${year}-${column}`}>
-                          {courses.map((course, idx) => (
-                              <tr
-                                  key={`${year}-${column}-${course.code}-${idx}`}
-                                  className=""
-                              >
-                                <td className="border p-2 align-top">
-                                  {column === "year"
-                                      ? "Year-long"
-                                      : column === "sem1"
-                                          ? "Semester 1"
-                                          : "Semester 2"}
-                                </td>
-                                <td className="border p-2">{course.code}</td>
-                                <td className="border p-2">{course.title}</td>
-                                <td className="border p-2">{course.credits}</td>
-                              </tr>
-                          ))}
-                          <tr className="bg-gray-100">
-                            <td className="border p-2 font-semibold">
-                              {column === "year"
-                                  ? "Year-long total"
-                                  : column === "sem1"
-                                      ? "Semester 1 total"
-                                      : "Semester 2 total"}
-                            </td>
-                            <td className="border p-2" />
-                            <td className="border p-2" />
-                            <td className="border p-2 font-semibold">
-                              {totalCredits}
-                            </td>
-                          </tr>
-                        </React.Fragment>
-                    ))}
-                    </tbody>
-                  </table>
-                </div>
-            ))}
-          </CardContent>
-        </Card>
+        <CardContent className="overflow-x-auto">
+          {allSummary.map(({ year, columns }) => (
+            <div key={year} className="mb-6">
+              <div className="font-bold text-lg mb-2">Year {year}</div>
+              <table className="w-full border-collapse mb-4">
+                <thead>
+                  <tr>
+                    <th className="border p-2 text-left">Column</th>
+                    <th className="border p-2 text-left">Course Code</th>
+                    <th className="border p-2 text-left">Title</th>
+                    <th className="border p-2 text-left">Credits</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {columns.map(({ column, courses, totalCredits }) => (
+                    <React.Fragment key={`${year}-${column}`}>
+                      {courses.map((course, idx) => (
+                        <tr
+                          key={`${year}-${column}-${course.code}-${idx}`}
+                          className=""
+                        >
+                          <td className="border p-2 align-top">
+                            {column === "year"
+                              ? "Year-long"
+                              : column === "sem1"
+                              ? "Semester 1"
+                              : "Semester 2"}
+                          </td>
+                          <td className="border p-2">{course.code}</td>
+                          <td className="border p-2">{course.title}</td>
+                          <td className="border p-2">{course.credits}</td>
+                        </tr>
+                      ))}
+                      <tr className="bg-gray-100">
+                        <td className="border p-2 font-semibold">
+                          {column === "year"
+                            ? "Year-long total"
+                            : column === "sem1"
+                            ? "Semester 1 total"
+                            : "Semester 2 total"}
+                        </td>
+                        <td className="border p-2" />
+                        <td className="border p-2" />
+                        <td className="border p-2 font-semibold">
+                          {totalCredits}
+                        </td>
+                      </tr>
+                    </React.Fragment>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
     );
   }
 
   // Flatten the all-years summary into CSV rows
   function buildCsvRows(
-      allSummary: {
-        year: Year;
-        columns: {
-          column: ColumnType;
-          courses: Course[];
-          totalCredits: number;
-        }[];
-      }[]
+    allSummary: {
+      year: Year;
+      columns: {
+        column: ColumnType;
+        courses: Course[];
+        totalCredits: number;
+      }[];
+    }[]
   ) {
     const rows: string[][] = [];
     // Header
@@ -509,10 +532,10 @@ export default function Planner() {
           rows.push([
             String(year),
             column === "year"
-                ? "Year-long"
-                : column === "sem1"
-                    ? "Semester 1"
-                    : "Semester 2",
+              ? "Year-long"
+              : column === "sem1"
+              ? "Semester 1"
+              : "Semester 2",
             course.code,
             course.title,
             String(course.credits),
@@ -522,15 +545,13 @@ export default function Planner() {
         rows.push([
           String(year),
           column === "year"
-              ? "Year-long total"
-              : column === "sem1"
-                  ? "Semester 1 total"
-                  : "Semester 2 total",
+            ? "Year-long total"
+            : column === "sem1"
+            ? "Semester 1 total"
+            : "Semester 2 total",
           "",
           "",
-          String(
-              courses.reduce((sum, c) => sum + (c?.credits ?? 0), 0)
-          ),
+          String(courses.reduce((sum, c) => sum + (c?.credits ?? 0), 0)),
         ]);
       });
     });
@@ -538,35 +559,35 @@ export default function Planner() {
     return rows;
   }
 
-// Converts rows to a CSV blob and triggers download
+  // Converts rows to a CSV blob and triggers download
   function downloadCsv(
-      allSummary: {
-        year: Year;
-        columns: {
-          column: ColumnType;
-          courses: Course[];
-          totalCredits: number;
-        }[];
-      }[],
-      programTitle: string
+    allSummary: {
+      year: Year;
+      columns: {
+        column: ColumnType;
+        courses: Course[];
+        totalCredits: number;
+      }[];
+    }[],
+    programTitle: string
   ) {
     const rows = buildCsvRows(allSummary);
     const csvContent = rows
-        .map((r) =>
-            r
-                .map((cell) => {
-                  // escape quotes
-                  const escaped = String(cell).replace(/"/g, '""');
-                  return `"${escaped}"`;
-                })
-                .join(",")
-        )
-        .join("\r\n");
+      .map((r) =>
+        r
+          .map((cell) => {
+            // escape quotes
+            const escaped = String(cell).replace(/"/g, '""');
+            return `"${escaped}"`;
+          })
+          .join(",")
+      )
+      .join("\r\n");
 
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const filename = `${programTitle
-        .replace(/\s+/g, "_")
-        .toLowerCase()}_summary_all_years.csv`;
+      .replace(/\s+/g, "_")
+      .toLowerCase()}_summary_all_years.csv`;
 
     // create invisible link and click
     const url = URL.createObjectURL(blob);
@@ -579,7 +600,6 @@ export default function Planner() {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   }
-
 
   const renderColumn = (label: string | null, type: ColumnType) => {
     const key = `y${selectedYear}${type}cred` as keyof Program;
@@ -759,6 +779,9 @@ export default function Planner() {
       </div>
       {selectedProgramCode && selectedYear ? (
         <>
+          <Button onClick={clearLocalStorageColumns}>
+            <RefreshCwIcon /> Reset Choices
+          </Button>
           <div className="hidden sm:flex flex-col sm:flex-row gap-4">
             {renderColumn("Year-Long", "year")}
             {renderColumn("Semester 1", "sem1")}
@@ -769,18 +792,14 @@ export default function Planner() {
           </div>
 
           <div className="hidden md:block">
-
-
-          {selectedProgramCode && allYearsSummary && (
+            {selectedProgramCode && allYearsSummary && (
               <SummaryTableAllYears
-                  allSummary={allYearsSummary}
-                  programs={programs}
-                  selectedProgramCode={selectedProgramCode}
+                allSummary={allYearsSummary}
+                programs={programs}
+                selectedProgramCode={selectedProgramCode}
               />
-          )}
-
+            )}
           </div>
-
         </>
       ) : null}
 

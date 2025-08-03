@@ -7,10 +7,9 @@ import {
   DialogHeader,
   Dialog,
   DialogContent,
-  DialogOverlay,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { DialogClose, DialogPortal } from "@radix-ui/react-dialog";
+import { DialogClose } from "@radix-ui/react-dialog";
 import { usePathname } from "next/dist/client/components/navigation";
 
 const EXCLUDED_PATHS = ["/privacy", "/login", "/logout"];
@@ -62,8 +61,6 @@ export default function CookieConsent() {
 
   return (
     <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-      <DialogOverlay />
-      <DialogPortal>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>We use cookies and tracking technologies</DialogTitle>
@@ -89,7 +86,6 @@ export default function CookieConsent() {
             </DialogClose>
           </div>
         </DialogContent>
-      </DialogPortal>
     </Dialog>
   );
 }

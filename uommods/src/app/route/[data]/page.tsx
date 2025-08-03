@@ -9,7 +9,7 @@ import HeaderBar from "@/app/components/HeaderBar";
 import AssessmentSplit from "@/app/components/AssessmentSplit";
 import RatingsSection from "@/app/components/RatingsSection";
 import {Toaster} from "@/components/ui/sonner";
-import ProgramDependencyGraph from "@/app/components/ProgramDependencyGraph";
+import ProgramTabs from "@/app/components/ProgramTabs";
 
 
 
@@ -20,6 +20,7 @@ const Page = async({
     params: Promise<{ data: string }>;
 
 }) => {
+
     const resolvedParams = await params;
     const code = (resolvedParams.data as string)?.toUpperCase()
     const { data: course, error } = await supabase
@@ -27,6 +28,12 @@ const Page = async({
         .select('*')
         .eq('code', code)
         .single()
+
+    const {data: programs} = await supabase
+    .from('programs')
+    .select('program_id')
+
+
 
     if (error || !course) {
         return (
@@ -69,8 +76,10 @@ const Page = async({
                     <GradeChart data={course.gradestats} overallMean={course.overallmean}/>)}
 
                 <h2 className="text-xl font-semibold">Course Dependency Graph</h2>
-                <CourseDependencyGraph courseCode={course.code}/>
-                <ProgramDependencyGraph program_id={"GG14"} />
+                <CourseDependencyGraph courseCode={course.code} />
+
+                    <ProgramTabs initialProgramId="G400" selectedcourseid={course.code}/>
+
 
                 <RatingsSection courseCode={course.code} />
             </div>

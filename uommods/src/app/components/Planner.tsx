@@ -37,7 +37,7 @@ export default function Planner() {
   const [selectedSemester, setSelectedSemester] =
     useState<keyof typeof Semester>("sem1");
   const [selectedYear, setSelectedYear] = useState<Year>(
-    Number(localStorage.getItem("selectedYear") ?? 2) as Year
+    Number(localStorage.getItem("selectedYear") ?? "") as Year
   );
   const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
   const [pendingCourse, setPendingCourse] = useState<Course | null>(null);

@@ -17,6 +17,7 @@ const supabase = createClient(
 
 type Props = {
     program_id: string;
+    selectedcourseid: string;
 
 }
 
@@ -27,7 +28,7 @@ type Style = {
     strokeDasharray?: string;
 }
 
-export default function CourseFlow({program_id}: Props) {
+export default function CourseFlow({program_id, selectedcourseid}: Props) {
     const [nodes, setNodes, onNodesChange] = useNodesState([]);
     const [edges, setEdges, onEdgesChange] = useEdgesState([]);
     const [loading, setLoading] = useState(true);
@@ -42,6 +43,14 @@ export default function CourseFlow({program_id}: Props) {
             fontWeight: node.id === selectedNodeId ? 'bold' : 'normal',
         },
     }));
+
+    // inside CourseFlow component, after your useState declarations:
+    useEffect(() => {
+        if (selectedcourseid && selectedcourseid !== selectedNodeId) {
+            setSelectedNodeId(selectedcourseid);
+        }
+    }, [selectedcourseid]);
+
 
     const styledEdges: Edge[] = edges.map((edge) => {
         const isConnected =

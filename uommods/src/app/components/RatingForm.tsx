@@ -34,6 +34,7 @@ export default function RatingForm({ courseCode, onRatingSubmitted }: Props) {
         fullname: null,
     });
     const [redirectUrl, setRedirectUrl] = useState<string>("");
+    const [anonymous, setAnonymous] = useState<boolean>(false);
 
     useEffect(() => {
         const fetchSession = async () => {
@@ -80,16 +81,26 @@ export default function RatingForm({ courseCode, onRatingSubmitted }: Props) {
 
     async function handleSubmit() {
         setLoading(true);
-        const { error } = await supabase.from('ratings').insert([{
+
+        const payload: any = {
             course_code: courseCode,
             difficulty,
             quality,
             enjoyment,
             comment,
-            fullname,
-            username,
             created_at: new Date().toISOString(),
-        }]);
+        };
+
+        if (!anonymous) {
+            payload.fullname = fullname;
+            payload.username = username;
+        }
+        else{
+            payload.fullname = "Anonymous";
+            payload.username = "anonymous";
+        }
+
+        const { error } = await supabase.from('ratings').insert([payload]);
         setLoading(false);
 
         if (!error) {
@@ -98,6 +109,7 @@ export default function RatingForm({ courseCode, onRatingSubmitted }: Props) {
             setQuality(3);
             setEnjoyment(3);
             setComment('');
+            setAnonymous(false);
             onRatingSubmitted?.();
         } else {
             toast('Error submitting rating');
@@ -118,7 +130,23 @@ export default function RatingForm({ courseCode, onRatingSubmitted }: Props) {
             ) : (
                 <>
                     <h2 className="text-xl font-semibold">Rate this Course</h2>
-                    <p className="text-sm text-gray-600 mb-4">Posting as {decodedName}</p>
+                    <div className="flex items-center gap-4">
+                        <p className="text-sm text-gray-600 mb-1">
+                            {anonymous
+                                ? 'Posting anonymously'
+                                : `Posting as ${decodedName}`}
+                        </p>
+                        <label className="inline-flex items-center gap-2 text-sm">
+                            <input
+                                type="checkbox"
+                                checked={anonymous}
+                                onChange={(e) => setAnonymous(e.target.checked)}
+                                className="form-checkbox"
+                            />
+                            <span>Anonymous</span>
+                        </label>
+                    </div>
+
 
                     <div className="flex flex-col md:flex-row gap-6">
                         {/* Left: Sliders */}

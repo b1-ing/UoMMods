@@ -20,6 +20,17 @@ export type AuthData = {
     fullname: string | null;
 };
 
+type Payload = {
+    course_code: string,
+    difficulty: number,
+    quality: number,
+    enjoyment: number,
+    comment: string,
+    created_at:string,
+    fullname:string,
+    username :string,
+};
+
 export default function RatingForm({ courseCode, onRatingSubmitted }: Props) {
     const [difficulty, setDifficulty] = useState(3);
     const [quality, setQuality] = useState(3);
@@ -82,22 +93,20 @@ export default function RatingForm({ courseCode, onRatingSubmitted }: Props) {
     async function handleSubmit() {
         setLoading(true);
 
-        const payload: any = {
+        const payload: Payload = {
             course_code: courseCode,
             difficulty,
             quality,
             enjoyment,
             comment,
             created_at: new Date().toISOString(),
+            fullname: "Anonymous",
+            username: "anonymous",
         };
 
-        if (!anonymous) {
+        if (!anonymous && fullname && username) {
             payload.fullname = fullname;
             payload.username = username;
-        }
-        else{
-            payload.fullname = "Anonymous";
-            payload.username = "anonymous";
         }
 
         const { error } = await supabase.from('ratings').insert([payload]);

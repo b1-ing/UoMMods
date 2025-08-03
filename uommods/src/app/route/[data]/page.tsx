@@ -29,9 +29,6 @@ const Page = async({
         .eq('code', code)
         .single()
 
-    const {data: programs} = await supabase
-    .from('programs')
-    .select('program_id')
 
 
 

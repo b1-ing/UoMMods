@@ -24,7 +24,7 @@ const supabase = createClient(
 
 type Props = {
     program_id: string;
-    selectedcourseid: string;
+    selectedcourseid?: string;
 
 }
 

@@ -1,12 +1,10 @@
 // app/components/ProgramTabs.tsx
 "use client";
 import { supabase } from '@/lib/supabase'
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import ProgramDependencyGraph from "@/app/components/ProgramDependencyGraph";
 
-type Program = {
-    program_id: string;
-};
+
 
 
 
@@ -21,7 +19,7 @@ export default function ProgramTabs({
     initialProgramId?: string;
     selectedcourseid?: string;
 }) {
-    const defaultId = initialProgramId || programs[0].program_id;
+    const defaultId = initialProgramId ?? programs?.[0]?.program_id ?? "";
     const [selected, setSelected] = useState<string>(defaultId);
 
 
@@ -30,7 +28,7 @@ export default function ProgramTabs({
     return (
         <div className="space-y-4">
             <div className="flex border-b overflow-x-auto">
-                {programs.map((p) => (
+                {programs?.map((p) => (
                     <button
                         key={p.program_id}
                         onClick={() => setSelected(p.program_id)}

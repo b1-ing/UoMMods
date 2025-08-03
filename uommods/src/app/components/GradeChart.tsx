@@ -16,7 +16,6 @@ type Props = {
     data?: {
         year: string;
         mean: number;
-        stdDev: number;
         n: number;
     }[];
     overallMean: number;

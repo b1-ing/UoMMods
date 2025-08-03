@@ -768,6 +768,9 @@ export default function Planner() {
             {renderColumnsMobile()}
           </div>
 
+          <div className="hidden md:block">
+
+
           {selectedProgramCode && allYearsSummary && (
               <SummaryTableAllYears
                   allSummary={allYearsSummary}
@@ -776,6 +779,7 @@ export default function Planner() {
               />
           )}
 
+          </div>
 
         </>
       ) : null}

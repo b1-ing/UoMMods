@@ -149,6 +149,51 @@ export default function Planner() {
     );
   };
 
+
+  const addCompulsoryCourses = useCallback(() => {
+    const program = programs[selectedProgramCode as keyof typeof programs];
+    if (!program || !selectedYear) return;
+
+    const newColumns: Record<ColumnType, Course[]> = {
+      year: [...columns[selectedYear]["year"]],
+      sem1: [...columns[selectedYear]["sem1"]],
+      sem2: [...columns[selectedYear]["sem2"]],
+    };
+
+    const toCourse = (code: string): Course | null => courses[code] ?? null;
+
+    const safeMap = (arr: string[]) =>
+        arr.map(toCourse).filter((course): course is Course => course !== null);
+
+    switch (selectedYear) {
+      case 1:
+        newColumns.year = safeMap(program.firstyrfy);
+        newColumns.sem1 = safeMap(program.firstyrs1comp);
+        newColumns.sem2 = safeMap(program.firstyrs2comp);
+        break;
+      case 2:
+        newColumns.year = safeMap(program.secondyrfy);
+        newColumns.sem1 = safeMap(program.secondyrs1comp);
+        newColumns.sem2 = safeMap(program.secondyrs2comp);
+        break;
+      case 3:
+        newColumns.year = safeMap(program.thirdyrfy);
+        newColumns.sem1 = safeMap(program.thirdyrs1comp);
+        newColumns.sem2 = safeMap(program.thirdyrs2comp);
+        break;
+      default:
+        return;
+    }
+
+    setColumns((prev) => {
+      return {
+        ...prev,
+        [selectedYear]: { ...prev[selectedYear], ...newColumns },
+      };
+    });
+  }, [selectedProgramCode, selectedYear, courses, programs, columns]);
+
+
   const handleAddWithPrereqs = () => {
     if (!pendingCourse) return;
     if (pendingCourse && pendingColumn) {
@@ -190,10 +235,19 @@ export default function Planner() {
   }, [selectedYear, selectedProgramCode, columns, storePreferences]);
 
   useEffect(() => {
-    if (selectedProgramCode && selectedYear && courses) {
+    if (!selectedProgramCode || !selectedYear || !courses) return;
+
+    // only populate compulsory courses if nothing has been added yet for that year
+    const yearCols = columns[selectedYear];
+    const hasAny = (["year", "sem1", "sem2"] as ColumnType[]).some(
+        (col) => yearCols[col]?.length > 0
+    );
+
+    if (!hasAny) {
       addCompulsoryCourses();
     }
-  }, [selectedProgramCode, selectedYear, courses]);
+  }, [selectedProgramCode, selectedYear, courses, columns, addCompulsoryCourses]);
+
 
   const updateColumns = (
     year: Year,
@@ -239,49 +293,6 @@ export default function Planner() {
 
     setOpenDrawer(null);
   };
-
-  const addCompulsoryCourses = useCallback(() => {
-    const program = programs[selectedProgramCode as keyof typeof programs];
-    if (!program || !selectedYear) return;
-
-    const newColumns: Record<ColumnType, Course[]> = {
-      year: [...columns[selectedYear]["year"]],
-      sem1: [...columns[selectedYear]["sem1"]],
-      sem2: [...columns[selectedYear]["sem2"]],
-    };
-
-    const toCourse = (code: string): Course | null => courses[code] ?? null;
-
-    const safeMap = (arr: string[]) =>
-      arr.map(toCourse).filter((course): course is Course => course !== null);
-
-    switch (selectedYear) {
-      case 1:
-        newColumns.year = safeMap(program.firstyrfy);
-        newColumns.sem1 = safeMap(program.firstyrs1comp);
-        newColumns.sem2 = safeMap(program.firstyrs2comp);
-        break;
-      case 2:
-        newColumns.year = safeMap(program.secondyrfy);
-        newColumns.sem1 = safeMap(program.secondyrs1comp);
-        newColumns.sem2 = safeMap(program.secondyrs2comp);
-        break;
-      case 3:
-        newColumns.year = safeMap(program.thirdyrfy);
-        newColumns.sem1 = safeMap(program.thirdyrs1comp);
-        newColumns.sem2 = safeMap(program.thirdyrs2comp);
-        break;
-      default:
-        return;
-    }
-
-    setColumns((prev) => {
-      return {
-        ...prev,
-        [selectedYear]: { ...prev[selectedYear], ...newColumns },
-      };
-    });
-  }, [selectedProgramCode, selectedYear, courses, programs, columns]);
 
   const removeCourseFromColumn = (course: Course, column: ColumnType) => {
     setColumns((prev) => {

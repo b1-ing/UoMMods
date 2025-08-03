@@ -55,7 +55,7 @@ export default function CourseFlow({program_id, selectedcourseid}: Props) {
         if (selectedcourseid && selectedcourseid !== selectedNodeId) {
             setSelectedNodeId(selectedcourseid);
         }
-    }, [selectedcourseid]);
+    }, [selectedcourseid, selectedNodeId]);
 
 
     const styledEdges: Edge[] = edges.map((edge) => {

@@ -36,7 +36,7 @@ export default function GradeChart({ data, overallMean  }: Props) {
                     y={overallMean}
                     stroke="red"
                     strokeDasharray="5 5"
-                    label={{ value: `Overall Mean: ${overallMean.toFixed(1)}`, position: 'top', fill: 'red' }}
+                    label={{ value: `Overall Mean: ${overallMean?.toFixed(1)}`, position: 'top', fill: 'red' }}
                 />
             </BarChart>
         </ResponsiveContainer>

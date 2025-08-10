@@ -23,7 +23,6 @@ import { Course } from "@/lib/mockcourses";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { PrereqDisplay } from "@/app/components/PrereqDisplay";
 import Link from "next/link";
-import { supabase } from "@/lib/supabase";
 import { Semester } from "@/lib/semesters";
 
 type ColumnType = "year" | "sem1" | "sem2";
@@ -51,27 +50,26 @@ const defaultColumns = {
   },
 };
 
-export default function Planner() {
+type PlannerProps = {
+  programs: Record<string, Program>;
+};
+
+const Planner = ({ programs }: PlannerProps) => {
   const [courses, setCourses] = useState<Record<string, Course>>({});
-  const [selectedProgramCode, setSelectedProgramCode] = useState<string>(
-    localStorage.getItem("selectedProgramCode") ?? ""
-  );
   const [selectedSemester, setSelectedSemester] =
     useState<keyof typeof Semester>("sem1");
-  const [selectedYear, setSelectedYear] = useState<Year>(
-    Number(localStorage.getItem("selectedYear") ?? "") as Year
-  );
+  const [selectedYear, setSelectedYear] = useState<Year>(Number("") as Year);
+  const [selectedProgramCode, setSelectedProgramCode] = useState<string>("");
   const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
   const [pendingCourse, setPendingCourse] = useState<Course | null>(null);
   const [missingPrereqs, setMissingPrereqs] = useState<Course[]>([]);
   const [prereqDialogOpen, setPrereqDialogOpen] = useState(false);
   const [pendingColumn, setPendingColumn] = useState<ColumnType>("year");
-
+  const [isPreferencesFetched, setIsPreferencesFetched] =
+    useState<boolean>(false);
   const [openDrawer, setOpenDrawer] = useState<ColumnType | null>(null);
-  const [columns, setColumns] = useState<
-    Record<Year, Record<ColumnType, Course[]>>
-  >(JSON.parse(localStorage.getItem("columns") ?? "null") ?? defaultColumns);
-  const [programs, setPrograms] = useState<Record<string, Program>>({});
+  const [columns, setColumns] =
+    useState<Record<Year, Record<ColumnType, Course[]>>>(defaultColumns);
 
   const resetColumns = () => {
     setColumns(defaultColumns);
@@ -83,15 +81,13 @@ export default function Planner() {
   };
 
   const fetchCourses = async () => {
-    const { data } = await supabase
-      .from("course_programs")
-      .select(
-        `
-          course_code,
-          courses (
-          *)`
-      )
-      .eq("program_id", selectedProgramCode);
+    const response = await fetch(
+      `/api/courses?programCode=${selectedProgramCode}`
+    );
+    if (!response.ok) {
+      console.log("Error fetching courses: ", response.text);
+    }
+    const data = await response.json();
     const courseMap: Record<string, Course> = {};
     if (data) {
       data.forEach((record) => {
@@ -122,23 +118,6 @@ export default function Planner() {
     setCourses(courseMap);
   };
 
-  const fetchPrograms = async () => {
-    const { data, error } = await supabase.from("programs").select("*");
-
-    if (error) {
-      console.error("Error fetching programs:", error);
-      return;
-    }
-
-    // Convert array to object for easier access
-    const programMap: Record<string, Program> = {};
-    data?.forEach((program) => {
-      programMap[program.program_id] = program;
-    });
-
-    setPrograms(programMap);
-  };
-
   const storePreferences = async () => {
     localStorage.setItem("selectedYear", selectedYear.toString());
     localStorage.setItem("selectedProgramCode", selectedProgramCode.toString());
@@ -155,9 +134,10 @@ export default function Planner() {
     setColumns(
       (prev) => JSON.parse(localStorage.getItem("columns") ?? "null") ?? prev
     );
+    setIsPreferencesFetched(true);
   };
 
-  const addCompulsoryCourses = useCallback(() => {
+  const addCompulsoryCourses = () => {
     const program = programs[selectedProgramCode as keyof typeof programs];
     if (!program || !selectedYear) return;
 
@@ -198,7 +178,7 @@ export default function Planner() {
         [selectedYear]: { ...prev[selectedYear], ...newColumns },
       };
     });
-  }, [selectedProgramCode, selectedYear, courses, programs, columns]);
+  };
 
   const handleAddWithPrereqs = () => {
     if (!pendingCourse) return;
@@ -228,21 +208,21 @@ export default function Planner() {
   };
 
   useEffect(() => {
+    console.log("Fetching prefs");
+    fetchPreferences();
+  }, []);
+
+  useEffect(() => {
+    if (!!selectedProgramCode) fetchCourses();
+  }, [selectedProgramCode]);
+
+  useEffect(() => {
     resetColumns();
   }, [selectedProgramCode]);
 
   useEffect(() => {
-    fetchPreferences();
-    fetchPrograms();
-  }, []);
-
-  useEffect(() => {
-    fetchCourses();
-  }, [selectedProgramCode, fetchCourses]);
-
-  useEffect(() => {
-    storePreferences();
-  }, [selectedYear, selectedProgramCode, columns, storePreferences]);
+    if (isPreferencesFetched) storePreferences();
+  }, [selectedYear, selectedProgramCode, columns, isPreferencesFetched]);
 
   useEffect(() => {
     if (!selectedProgramCode || !selectedYear || !courses) return;
@@ -256,13 +236,7 @@ export default function Planner() {
     if (!hasAny) {
       addCompulsoryCourses();
     }
-  }, [
-    selectedProgramCode,
-    selectedYear,
-    courses,
-    columns,
-    addCompulsoryCourses,
-  ]);
+  }, [selectedProgramCode, selectedYear, courses, columns]);
 
   const updateColumns = (
     year: Year,
@@ -858,4 +832,6 @@ export default function Planner() {
       </Dialog>
     </div>
   );
-}
+};
+
+export default Planner;

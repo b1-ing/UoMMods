@@ -90,7 +90,7 @@ const Planner = ({ programs }: PlannerProps) => {
     const data = await response.json();
     const courseMap: Record<string, Course> = {};
     if (data) {
-      data.forEach((record) => {
+      data.forEach((record: any) => {
         const courses = record.courses;
         if (Array.isArray(courses)) {
           courses.forEach((course) => {

@@ -4,18 +4,20 @@ from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 import pandas as pd
 import os
+from dotenv import load_dotenv
 import string
 # Uncomment these lines if you want to use Supabase
 from supabase import create_client, Client
 
 # ----------- CONFIG -----------
 
+load_dotenv("uommods/.env")
 BASE_PAGE = "https://www.manchester.ac.uk/study/undergraduate/courses/2025/00558/bsc-computer-science-and-mathematics/course-details/"
 HEADERS = {"User-Agent": "Mozilla/5.0"}
 
 # Supabase credentials from env variables (optional)
-SUPABASE_URL = "https://lzrehbppjccwviclovpn.supabase.co"  # e.g. "https://your-project.supabase.co"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx6cmVoYnBwamNjd3ZpY2xvdnBuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAzNDM5NTYsImV4cCI6MjA2NTkxOTk1Nn0.qwck8XV1Pf04GWN0RFPdG80tO1aDccfciScO0bKoZ5M" # service role key
+SUPABASE_URL = os.getenv("NEXT_PUBLIC_SUPABASE_URL") # e.g. "https://your-project.supabase.co"
+SUPABASE_KEY =  os.getenv("NEXT_PUBLIC_SUPABASE_ANON_KEY") # service role key
 
 # Uncomment to initialize supabase client
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL and SUPABASE_KEY else None
@@ -522,6 +524,8 @@ def main():
                 "program_id": course_code,
             }, "course_programs", conflict_column="course_code,program_id")
 
+    # Invalidate server cache since we have just updated the database
+    requests.put(os.getenv("APP_HOME_URL") + '/api/courses', timeout=1)
 
 if __name__ == "__main__":
     main()

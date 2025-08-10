@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
 // When the database is updated, by the scraper for example, this invalidates
 // the cache so clients get up-to-date information
 
-export async function PUT(request: Request) {
+export async function PUT() {
   revalidatePath("/api/courses");
   return new Response(
     JSON.stringify({ message: "Cache invalidated for all courses" }),

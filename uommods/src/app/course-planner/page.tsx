@@ -1,10 +1,8 @@
-import dynamic from "next/dynamic";
 import HeaderBar from "@/app/components/HeaderBar";
 import Planner from "../components/Planner";
 import { supabase } from "@/lib/supabase";
 import { unstable_cache } from "next/cache";
 import { Program } from "@/lib/programs";
-import test from "node:test";
 
 const getPrograms = unstable_cache(async () => {
   return await supabase.from("programs").select("*");

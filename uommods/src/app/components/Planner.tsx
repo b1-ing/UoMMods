@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useCallback } from "react";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import {
   Drawer,
@@ -80,50 +79,6 @@ const Planner = ({ programs }: PlannerProps) => {
     resetColumns();
   };
 
-  const fetchCourses = async () => {
-    const response = await fetch(
-      `/api/courses?programCode=${selectedProgramCode}`
-    );
-    if (!response.ok) {
-      console.log("Error fetching courses: ", response.text);
-    }
-    const data = await response.json();
-    const courseMap: Record<string, Course> = {};
-    if (data) {
-      data.forEach((record: any) => {
-        const courses = record.courses;
-        if (Array.isArray(courses)) {
-          courses.forEach((course) => {
-            if (course?.code) {
-              courseMap[course.code] = {
-                ...course,
-                code: course.code,
-              };
-            }
-          });
-        } else if (
-          courses &&
-          typeof courses === "object" &&
-          "code" in courses
-        ) {
-          const singleCourse = courses as Course;
-          courseMap[singleCourse.code] = {
-            ...singleCourse,
-            code: singleCourse.code,
-          };
-        }
-      });
-    }
-
-    setCourses(courseMap);
-  };
-
-  const storePreferences = async () => {
-    localStorage.setItem("selectedYear", selectedYear.toString());
-    localStorage.setItem("selectedProgramCode", selectedProgramCode.toString());
-    localStorage.setItem("columns", JSON.stringify(columns));
-  };
-
   const fetchPreferences = async () => {
     setSelectedYear(
       (prev) => Number(localStorage.getItem("selectedYear") ?? prev) as Year
@@ -135,49 +90,6 @@ const Planner = ({ programs }: PlannerProps) => {
       (prev) => JSON.parse(localStorage.getItem("columns") ?? "null") ?? prev
     );
     setIsPreferencesFetched(true);
-  };
-
-  const addCompulsoryCourses = () => {
-    const program = programs[selectedProgramCode as keyof typeof programs];
-    if (!program || !selectedYear) return;
-
-    const newColumns: Record<ColumnType, Course[]> = {
-      year: [...columns[selectedYear]["year"]],
-      sem1: [...columns[selectedYear]["sem1"]],
-      sem2: [...columns[selectedYear]["sem2"]],
-    };
-
-    const toCourse = (code: string): Course | null => courses[code] ?? null;
-
-    const safeMap = (arr: string[]) =>
-      arr.map(toCourse).filter((course): course is Course => course !== null);
-
-    switch (selectedYear) {
-      case 1:
-        newColumns.year = safeMap(program.firstyrfy);
-        newColumns.sem1 = safeMap(program.firstyrs1comp);
-        newColumns.sem2 = safeMap(program.firstyrs2comp);
-        break;
-      case 2:
-        newColumns.year = safeMap(program.secondyrfy);
-        newColumns.sem1 = safeMap(program.secondyrs1comp);
-        newColumns.sem2 = safeMap(program.secondyrs2comp);
-        break;
-      case 3:
-        newColumns.year = safeMap(program.thirdyrfy);
-        newColumns.sem1 = safeMap(program.thirdyrs1comp);
-        newColumns.sem2 = safeMap(program.thirdyrs2comp);
-        break;
-      default:
-        return;
-    }
-
-    setColumns((prev) => {
-      return {
-        ...prev,
-        [selectedYear]: { ...prev[selectedYear], ...newColumns },
-      };
-    });
   };
 
   const handleAddWithPrereqs = () => {
@@ -213,6 +125,46 @@ const Planner = ({ programs }: PlannerProps) => {
   }, []);
 
   useEffect(() => {
+    const fetchCourses = async () => {
+      const response = await fetch(
+        `/api/courses?programCode=${selectedProgramCode}`
+      );
+      if (!response.ok) {
+        console.log("Error fetching courses: ", response.text);
+      }
+      const data: {
+        course_code: string;
+        courses: Course[];
+      }[] = await response.json();
+      const courseMap: Record<string, Course> = {};
+      if (data) {
+        data.forEach((record) => {
+          const courses = record.courses;
+          if (Array.isArray(courses)) {
+            courses.forEach((course) => {
+              if (course?.code) {
+                courseMap[course.code] = {
+                  ...course,
+                  code: course.code,
+                };
+              }
+            });
+          } else if (
+            courses &&
+            typeof courses === "object" &&
+            "code" in courses
+          ) {
+            const singleCourse = courses as Course;
+            courseMap[singleCourse.code] = {
+              ...singleCourse,
+              code: singleCourse.code,
+            };
+          }
+        });
+      }
+
+      setCourses(courseMap);
+    };
     if (!!selectedProgramCode) fetchCourses();
   }, [selectedProgramCode]);
 
@@ -221,6 +173,14 @@ const Planner = ({ programs }: PlannerProps) => {
   }, [selectedProgramCode]);
 
   useEffect(() => {
+    const storePreferences = async () => {
+      localStorage.setItem("selectedYear", selectedYear.toString());
+      localStorage.setItem(
+        "selectedProgramCode",
+        selectedProgramCode.toString()
+      );
+      localStorage.setItem("columns", JSON.stringify(columns));
+    };
     if (isPreferencesFetched) storePreferences();
   }, [selectedYear, selectedProgramCode, columns, isPreferencesFetched]);
 
@@ -233,10 +193,53 @@ const Planner = ({ programs }: PlannerProps) => {
       (col) => yearCols[col]?.length > 0
     );
 
+    const addCompulsoryCourses = () => {
+      const program = programs[selectedProgramCode as keyof typeof programs];
+      if (!program || !selectedYear) return;
+
+      const newColumns: Record<ColumnType, Course[]> = {
+        year: [...columns[selectedYear]["year"]],
+        sem1: [...columns[selectedYear]["sem1"]],
+        sem2: [...columns[selectedYear]["sem2"]],
+      };
+
+      const toCourse = (code: string): Course | null => courses[code] ?? null;
+
+      const safeMap = (arr: string[]) =>
+        arr.map(toCourse).filter((course): course is Course => course !== null);
+
+      switch (selectedYear) {
+        case 1:
+          newColumns.year = safeMap(program.firstyrfy);
+          newColumns.sem1 = safeMap(program.firstyrs1comp);
+          newColumns.sem2 = safeMap(program.firstyrs2comp);
+          break;
+        case 2:
+          newColumns.year = safeMap(program.secondyrfy);
+          newColumns.sem1 = safeMap(program.secondyrs1comp);
+          newColumns.sem2 = safeMap(program.secondyrs2comp);
+          break;
+        case 3:
+          newColumns.year = safeMap(program.thirdyrfy);
+          newColumns.sem1 = safeMap(program.thirdyrs1comp);
+          newColumns.sem2 = safeMap(program.thirdyrs2comp);
+          break;
+        default:
+          return;
+      }
+
+      setColumns((prev) => {
+        return {
+          ...prev,
+          [selectedYear]: { ...prev[selectedYear], ...newColumns },
+        };
+      });
+    };
+
     if (!hasAny) {
       addCompulsoryCourses();
     }
-  }, [selectedProgramCode, selectedYear, courses, columns]);
+  }, [selectedProgramCode, selectedYear, courses, columns, programs]);
 
   const updateColumns = (
     year: Year,

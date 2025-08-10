@@ -1,3 +1,4 @@
+import traceback
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
@@ -9,7 +10,7 @@ from supabase import create_client, Client
 
 # ----------- CONFIG -----------
 
-BASE_PAGE = "https://www.manchester.ac.uk/study/undergraduate/courses/2025/00560/bsc-computer-science/course-details/"
+BASE_PAGE = "https://www.manchester.ac.uk/study/undergraduate/courses/2025/00558/bsc-computer-science-and-mathematics/course-details/"
 HEADERS = {"User-Agent": "Mozilla/5.0"}
 
 # Supabase credentials from env variables (optional)
@@ -306,8 +307,8 @@ def scrape_unit_details(unit_url, unit_mandatory):
     else:
         assessment_record= {
                             "course_code": data["code"],
-                            "assessment_type_id": id,
-                            "percentage": 0,
+                            "assessment_type_id": 1,
+                            "percentage": 1,
                         }
         assessment_data.append(assessment_record)
     print(assessment_data)
@@ -437,6 +438,7 @@ def main():
         try:
             details = scrape_unit_details(unit["url"], unit["mandatory"])
         except Exception as e:
+            traceback.print_exc()
             print(f"⚠️ Failed to scrape {unit['code']} - {unit['title']}: {e}")
             continue  # Skip this unit entirely if an exception occurs
 
@@ -483,14 +485,9 @@ def main():
     "y3sem1cred": 40,
     "y3sem2cred": 40
     }
-
-
     print(course_data)
 
     insert_to_supabase(course_data, "programs", conflict_column="program_id")
-
-
-
 
     compiled_units = compute_required_by(compiled_units)
 
@@ -510,11 +507,11 @@ def main():
         insert_to_supabase(record, "courses", conflict_column="code")
 
     for record in compiled_units:
-        assessment_data=record['assessment_data']
+        assessment_data = record['assessment_data']
         print(assessment_data)
         insert_to_supabase(assessment_data, "course_assessments", conflict_column="course_code, assessment_type_id")
     for record in compiled_units:
-        schedule_data=record['schedule_data']
+        schedule_data = record['schedule_data']
         print(schedule_data)
         insert_to_supabase(schedule_data, "course_schedule", conflict_column="course_code, schedule_type_id")
 

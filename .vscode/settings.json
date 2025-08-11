@@ -1,0 +1,9 @@
+{
+  "files.autoSave": "afterDelay",
+  "git.autofetch": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "eslint.run": "onSave",
+  "eslint.format.enable": true,
+  "editor.formatOnSave": true,
+  "files.autoSaveDelay": 2500
+}

@@ -1,20 +1,23 @@
+import traceback
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 import pandas as pd
 import os
+from dotenv import load_dotenv
 import string
 # Uncomment these lines if you want to use Supabase
 from supabase import create_client, Client
 
 # ----------- CONFIG -----------
 
-BASE_PAGE = "https://www.manchester.ac.uk/study/undergraduate/courses/2025/00560/bsc-computer-science/course-details/"
+load_dotenv("uommods/.env")
+BASE_PAGE = "https://www.manchester.ac.uk/study/undergraduate/courses/2025/00558/bsc-computer-science-and-mathematics/course-details/"
 HEADERS = {"User-Agent": "Mozilla/5.0"}
 
 # Supabase credentials from env variables (optional)
-SUPABASE_URL = "https://lzrehbppjccwviclovpn.supabase.co"  # e.g. "https://your-project.supabase.co"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx6cmVoYnBwamNjd3ZpY2xvdnBuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAzNDM5NTYsImV4cCI6MjA2NTkxOTk1Nn0.qwck8XV1Pf04GWN0RFPdG80tO1aDccfciScO0bKoZ5M" # service role key
+SUPABASE_URL = os.getenv("NEXT_PUBLIC_SUPABASE_URL") # e.g. "https://your-project.supabase.co"
+SUPABASE_KEY =  os.getenv("NEXT_PUBLIC_SUPABASE_ANON_KEY") # service role key
 
 # Uncomment to initialize supabase client
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL and SUPABASE_KEY else None
@@ -306,8 +309,8 @@ def scrape_unit_details(unit_url, unit_mandatory):
     else:
         assessment_record= {
                             "course_code": data["code"],
-                            "assessment_type_id": id,
-                            "percentage": 0,
+                            "assessment_type_id": 1,
+                            "percentage": 1,
                         }
         assessment_data.append(assessment_record)
     print(assessment_data)
@@ -437,6 +440,7 @@ def main():
         try:
             details = scrape_unit_details(unit["url"], unit["mandatory"])
         except Exception as e:
+            traceback.print_exc()
             print(f"⚠️ Failed to scrape {unit['code']} - {unit['title']}: {e}")
             continue  # Skip this unit entirely if an exception occurs
 
@@ -483,14 +487,9 @@ def main():
     "y3sem1cred": 40,
     "y3sem2cred": 40
     }
-
-
     print(course_data)
 
     insert_to_supabase(course_data, "programs", conflict_column="program_id")
-
-
-
 
     compiled_units = compute_required_by(compiled_units)
 
@@ -510,11 +509,11 @@ def main():
         insert_to_supabase(record, "courses", conflict_column="code")
 
     for record in compiled_units:
-        assessment_data=record['assessment_data']
+        assessment_data = record['assessment_data']
         print(assessment_data)
         insert_to_supabase(assessment_data, "course_assessments", conflict_column="course_code, assessment_type_id")
     for record in compiled_units:
-        schedule_data=record['schedule_data']
+        schedule_data = record['schedule_data']
         print(schedule_data)
         insert_to_supabase(schedule_data, "course_schedule", conflict_column="course_code, schedule_type_id")
 
@@ -525,6 +524,8 @@ def main():
                 "program_id": course_code,
             }, "course_programs", conflict_column="course_code,program_id")
 
+    # Invalidate server cache since we have just updated the database
+    requests.put(os.getenv("APP_HOME_URL") + '/api/courses', timeout=1)
 
 if __name__ == "__main__":
     main()

@@ -327,47 +327,50 @@ export default function Planner() {
   function splitCourseCodes(codes: string): string[] {
     return codes.split(",");
   }
-  function courseExistsInColumns(
-    year: Year,
-    code: string,
-    columns: Record<Year, Record<ColumnType, Course[]>>
-  ): boolean {
-    return Object.values(columns[year]!).some((column) =>
-      column.some((course) => course?.code === code)
-    );
-  }
-
   const getFilteredCourses = (type: string) => {
-    if (!selectedProgramCode || !selectedYear) {
-      return [];
-    }
+    if (!selectedProgramCode || !selectedYear) return [];
 
-    switch (type) {
-      case "sem1":
-        return Object.values(courses).filter(
-          (course) =>
-            course.semesters?.includes("Semester 1") &&
-            course.level == selectedYear &&
-            course.mandatory === "Optional"
-        );
-      case "sem2":
-        return Object.values(courses).filter(
-          (course) =>
-            course.semesters?.includes("Semester 2") &&
-            course.level == selectedYear &&
-            course.mandatory === "Optional"
-        );
-      case "year":
-        return Object.values(courses).filter(
-          (course) =>
-            course.semesters?.includes("Full year") &&
-            course.level == selectedYear &&
-            course.mandatory === "Optional"
-        );
-      default:
-        return Object.values(courses);
-    }
+    const program = programs[selectedProgramCode];
+    if (!program) return [];
+
+    // Map year + semester to the relevant program property
+    const optionalLists: Record<Year, Record<ColumnType, string[]>> = {
+      1: {
+        year: program.firstyrfyop || [],
+        sem1: program.firstyrs1op || [],
+        sem2: program.firstyrs2op || [],
+      },
+      2: {
+        year: program.secondyrfyop || [],
+        sem1: program.secondyrs1op || [],
+        sem2: program.secondyrs2op || [],
+      },
+      3: {
+        year: program.thirdyrfyop || [],
+        sem1: program.thirdyrs1op || [],
+        sem2: program.thirdyrs2op || [],
+      },
+      4: {
+        year: program.fourthyrfyop || [],
+        sem1: program.fourthyrs1op || [],
+        sem2: program.fourthyrs2op || [],
+      },
+    };
+
+    const allowedCodes = optionalLists[selectedYear]?.[type as ColumnType] || [];
+
+    return Object.values(courses).filter(
+        (course) =>
+            course.level === selectedYear &&
+            allowedCodes.includes(course.code) &&
+            (
+                (type === "sem1" && course.semesters?.includes("Semester 1")) ||
+                (type === "sem2" && course.semesters?.includes("Semester 2")) ||
+                (type === "year" && course.semesters?.includes("Full year"))
+            )
+    );
   };
+
 
   // Build a summary of selected modules for the current program/year
   // Summary for all years, each with its columns
@@ -614,6 +617,7 @@ export default function Planner() {
           0
         )
       : 0;
+
 
     return (
       <Card className="w-full sm:w-1/3 p-4 flex flex-col gap-4 m-1">

@@ -25,7 +25,7 @@ import Link from "next/link";
 import { Semester } from "@/lib/semesters";
 
 type ColumnType = "year" | "sem1" | "sem2";
-export type Year = 1 | 2 | 3 | 4;
+export type Year = 1 | 2 | 3 ;
 const defaultColumns = {
   1: {
     year: [],
@@ -38,11 +38,6 @@ const defaultColumns = {
     sem2: [],
   },
   3: {
-    year: [],
-    sem1: [],
-    sem2: [],
-  },
-  4: {
     year: [],
     sem1: [],
     sem2: [],
@@ -313,24 +308,19 @@ const Planner = ({ programs }: PlannerProps) => {
     // Map year + semester to the relevant program property
     const optionalLists: Record<Year, Record<ColumnType, string[]>> = {
       1: {
-        year: program.firstyrfyop || [],
+        year: [],
         sem1: program.firstyrs1op || [],
         sem2: program.firstyrs2op || [],
       },
       2: {
-        year: program.secondyrfyop || [],
+        year: [],
         sem1: program.secondyrs1op || [],
         sem2: program.secondyrs2op || [],
       },
       3: {
-        year: program.thirdyrfyop || [],
+        year: [],
         sem1: program.thirdyrs1op || [],
         sem2: program.thirdyrs2op || [],
-      },
-      4: {
-        year: program.fourthyrfyop || [],
-        sem1: program.fourthyrs1op || [],
-        sem2: program.fourthyrs2op || [],
       },
     };
 
@@ -349,6 +339,17 @@ const Planner = ({ programs }: PlannerProps) => {
   };
 
 
+  function courseExistsInColumns(
+      year: Year,
+      code: string,
+      columns: Record<Year, Record<ColumnType, Course[]>>
+  ): boolean {
+    return Object.values(columns[year]!).some((column) =>
+        column.some((course) => course?.code === code)
+    );
+  }
+
+
   // Build a summary of selected modules for the current program/year
   // Summary for all years, each with its columns
   const allYearsSummary = React.useMemo(() => {
@@ -363,7 +364,7 @@ const Planner = ({ programs }: PlannerProps) => {
       }[];
     };
 
-    const summaries: YearSummary[] = ([1, 2, 3, 4] as Year[]).map((yr) => {
+    const summaries: YearSummary[] = ([1, 2, 3] as Year[]).map((yr) => {
       const yearCols =
         columns[yr] ||
         ({
@@ -747,7 +748,7 @@ const Planner = ({ programs }: PlannerProps) => {
               onChange={(e) => setSelectedYear(Number(e.target.value) as Year)}
             >
               <option value="">Select Year</option>
-              {[1, 2, 3, 4].map((year) => (
+              {[1, 2, 3].map((year) => (
                 <option key={year} value={year}>
                   Year {year}
                 </option>

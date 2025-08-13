@@ -3,8 +3,6 @@
 import Link from "next/link";
 import { Menu, X, User, LogOut, Settings, LogIn } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
-import GitHubButton from "react-github-btn";
-import { repoUrl } from "@/consts";
 import GithubStarButton from "./GithubStarButton";
 
 export default function HeaderBar() {

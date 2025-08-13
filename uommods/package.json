@@ -35,6 +35,7 @@
     "postcss": "^8.5.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-github-btn": "^1.4.0",
     "reactflow": "^11.11.4",
     "recharts": "^2.15.3",
     "sonner": "^2.0.5",

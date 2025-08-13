@@ -213,7 +213,7 @@ export default function CourseFlow({program_id, selectedcourseid}: Props) {
     };
 
     fetchCourses();
-  }, [setNodes, setEdges, setLoading, program_id]);
+  }, [ program_id]);
 
   if (loading) return <p>Loading course graph...</p>;
 

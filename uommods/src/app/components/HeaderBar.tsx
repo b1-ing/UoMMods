@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Menu, X, User, LogOut, Settings, LogIn } from "lucide-react";
+import { Menu, X, User, LogOut, Settings, LogIn, AppWindow } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import GithubStarButton from "./GithubStarButton";
 
@@ -105,6 +105,12 @@ export default function HeaderBar() {
             <Link href="/course-list" className="hover:text-blue-600">
               Course List
             </Link>
+            <div className="flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-blue-600">
+              <AppWindow  size={18} />
+              <Link href="/contribute" >
+                Contribute
+              </Link>
+            </div>
           </nav>
 
           <div className="hidden sm:flex items-center gap-6">
@@ -167,6 +173,7 @@ export default function HeaderBar() {
               )}
             </div>
             <GithubStarButton />
+
           </div>
 
           {/* Mobile menu button */}

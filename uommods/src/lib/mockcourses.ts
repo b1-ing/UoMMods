@@ -1,6 +1,6 @@
 // mockCourses.ts
 
-import type { Year } from "@/app/components/Planner";
+import type { Year } from "@/app/components/PlannerControls";
 
 export type Course = {
   code: string;

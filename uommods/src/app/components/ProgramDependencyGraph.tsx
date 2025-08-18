@@ -1,9 +1,9 @@
 // CourseFlow.tsx
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback, useMemo, useRef, Profiler } from "react";
 import { createClient } from "@supabase/supabase-js";
-import type { Edge, Node } from "reactflow";
+import type { Edge, Node, NodeMouseHandler } from "reactflow";
 import ReactFlow, {
   Background,
   Controls,
@@ -12,9 +12,12 @@ import ReactFlow, {
   Position,
   useEdgesState,
   useNodesState,
+  NodeChange,
+  EdgeChange,
 } from "reactflow";
 import "reactflow/dist/style.css";
 import { Course } from "@/lib/mockcourses";
+import { performanceMonitor } from "@/lib/utils";
 
 // Init Supabase
 const supabase = createClient(
@@ -25,9 +28,53 @@ const supabase = createClient(
 type Props = {
     program_id: string;
     selectedcourseid?: string;
-
 }
 
+// Layout cache for expensive calculations
+const layoutCache = new Map<string, { nodes: Node[], edges: Edge[] }>();
+
+// Debounce utility for performance
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+}
+
+// Virtual viewport for large graphs
+function useVirtualViewport(
+  nodes: Node[],
+  edges: Edge[],
+  viewportBounds: { x: number; y: number; width: number; height: number }
+) {
+  return useMemo(() => {
+    const BUFFER = 200; // Buffer around viewport
+    const visibleNodes = nodes.filter((node) => {
+      return (
+        node.position.x >= viewportBounds.x - BUFFER &&
+        node.position.x <= viewportBounds.x + viewportBounds.width + BUFFER &&
+        node.position.y >= viewportBounds.y - BUFFER &&
+        node.position.y <= viewportBounds.y + viewportBounds.height + BUFFER
+      );
+    });
+
+    const visibleNodeIds = new Set(visibleNodes.map(n => n.id));
+    const visibleEdges = edges.filter((edge) => 
+      visibleNodeIds.has(edge.source) && visibleNodeIds.has(edge.target)
+    );
+
+    return { nodes: visibleNodes, edges: visibleEdges };
+  }, [nodes, edges, viewportBounds.x, viewportBounds.y, viewportBounds.width, viewportBounds.height]);
+}
 
 type Style = {
   stroke?: string;
@@ -35,105 +82,90 @@ type Style = {
   strokeDasharray?: string;
 };
 
+const MemoizedReactFlow = React.memo(ReactFlow);
+
 export default function CourseFlow({program_id, selectedcourseid}: Props) {
     const [nodes, setNodes, onNodesChange] = useNodesState([]);
     const [edges, setEdges, onEdgesChange] = useEdgesState([]);
     const [loading, setLoading] = useState(true);
     const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+    const [viewportBounds] = useState({ x: 0, y: 0, width: 1000, height: 800 });
+    
+    const debouncedSelectedCourseId = useDebounce(selectedcourseid, 100);
+    const coursesDataRef = useRef<Course[]>([]);
+    
+    // Virtual viewport for performance
+    const { nodes: virtualNodes, edges: virtualEdges } = useVirtualViewport(nodes, edges, viewportBounds);
 
-  const styledNodes = nodes.map((node) => ({
-    ...node,
-    style: {
-      ...node.style,
-      border: node.id === selectedNodeId ? "3px solid #000" : "1px solid #999",
-      fontWeight: node.id === selectedNodeId ? "bold" : "normal",
-    },
-  }));
+    // Memoized styled nodes to prevent unnecessary recalculations
+    const styledNodes = useMemo(() => {
+      return virtualNodes.map((node) => ({
+        ...node,
+        style: {
+          ...node.style,
+          border: node.id === selectedNodeId ? "3px solid #000" : "1px solid #999",
+          fontWeight: node.id === selectedNodeId ? "bold" : "normal",
+        },
+      }));
+    }, [virtualNodes, selectedNodeId]);
 
-    // inside CourseFlow component, after your useState declarations:
-    useEffect(() => {
-        if (selectedcourseid && selectedcourseid !== selectedNodeId) {
-            setSelectedNodeId(selectedcourseid);
-        }
-    }, [selectedcourseid, selectedNodeId]);
-
-
-    const styledEdges: Edge[] = edges.map((edge) => {
-        const isConnected =
-            edge.source === selectedNodeId || edge.target === selectedNodeId;
+    // Memoized styled edges
+    const styledEdges: Edge[] = useMemo(() => {
+      return virtualEdges.map((edge) => {
+        const isConnected = edge.source === selectedNodeId || edge.target === selectedNodeId;
         return {
-            ...edge,
-            style: {
-                ...edge.style,
-                strokeWidth: isConnected ? 3 : 1,
-                stroke: isConnected ? '#000' : '#999',
-            },
-            markerEnd: {
-                type: MarkerType.ArrowClosed,
-                color: isConnected ? '#000' : '#999',
-            },
+          ...edge,
+          style: {
+            ...edge.style,
+            strokeWidth: isConnected ? 3 : 1,
+            stroke: isConnected ? '#000' : '#999',
+          },
+          markerEnd: {
+            type: MarkerType.ArrowClosed,
+            color: isConnected ? '#000' : '#999',
+          },
         };
-    });
-
-
-
-  useEffect(() => {
-    const fetchCourses = async () => {
-      const { data: courses, error } = await supabase
-        .from("course_programs")
-        .select(
-          `
-    course_code,
-    courses (
-    *
-    )
-  `
-        )
-        .eq("program_id", program_id);
-
-      if (error) {
-        console.error("Error fetching courses:", error);
-        return;
-      }
-
-      // Filter out compulsory modules
-
-      // Assume: data is CourseProgramRecord[] (from Supabase)
-      const allCourses: Course[] = [];
-
-      courses.forEach((record) => {
-        const courseOrCourses = record.courses as Course | Course[];
-
-        if (Array.isArray(courseOrCourses)) {
-          allCourses.push(...courseOrCourses);
-        } else if (courseOrCourses && courseOrCourses.code) {
-          allCourses.push(courseOrCourses);
-        }
       });
+    }, [virtualEdges, selectedNodeId]);
 
-      const filteredCourses = allCourses.filter(
-        (c): c is Course => !!c && !!c.code
-      );
+    // Debounced effect for selected course changes
+    useEffect(() => {
+        if (debouncedSelectedCourseId && debouncedSelectedCourseId !== selectedNodeId) {
+            setSelectedNodeId(debouncedSelectedCourseId);
+        }
+    }, [debouncedSelectedCourseId, selectedNodeId]);
+
+    // Memoized layout calculation
+    const calculateLayout = useCallback((courses: Course[]) => {
+      performanceMonitor.startTiming('layout-calculation');
+      
+      const cacheKey = `${program_id}-${courses.length}-${courses.map(c => c.code).join(',')}`;
+      
+      // Check cache first
+      if (layoutCache.has(cacheKey)) {
+        performanceMonitor.endTiming('layout-calculation');
+        return layoutCache.get(cacheKey)!;
+      }
 
       const levelMap: Record<number, Course[]> = {
         1: [] as Course[],
         2: [] as Course[],
         3: [] as Course[],
       };
-      filteredCourses.forEach((c: Course) => {
+      
+      courses.forEach((c: Course) => {
         if (levelMap[c.level]) {
           levelMap[c.level].push(c);
         }
       });
 
       const spacingX = 100;
-      // const spacingY = 250;
       const verticalJitter = 60;
 
       const levelYOffset: Record<number, number> = {
-        3: 0, // Topmost level
-        2: 300, // Push level 2 down by 300px
-        1: 600, // Push level 1 further down
+        3: 0,
+        2: 300,
+        1: 600,
       };
 
       const generatedNodes: Node[] = [];
@@ -146,9 +178,7 @@ export default function CourseFlow({program_id, selectedcourseid}: Props) {
 
         levelCourses.forEach((course, j) => {
           const x = offsetX + j * spacingX;
-          const y =
-            levelYOffset[level] +
-            (j % 2 === 0 ? -verticalJitter : verticalJitter);
+          const y = levelYOffset[level] + (j % 2 === 0 ? -verticalJitter : verticalJitter);
           const id = course.code;
 
           nodePositions[id] = { x, y };
@@ -177,7 +207,7 @@ export default function CourseFlow({program_id, selectedcourseid}: Props) {
         type: "prerequisites_list" | "corequisites_list",
         style: Style
       ) => {
-        filteredCourses.forEach((course) => {
+        courses.forEach((course) => {
           const deps = course[type];
           if (deps) {
             const related = deps.split(",").map((c: string) => c.trim());
@@ -207,30 +237,131 @@ export default function CourseFlow({program_id, selectedcourseid}: Props) {
         strokeDasharray: "4 2",
       });
 
-      setNodes(generatedNodes);
-      setEdges(edgesList);
-      setLoading(false);
+      const result = { nodes: generatedNodes, edges: edgesList };
+      
+      // Cache the result
+      layoutCache.set(cacheKey, result);
+      
+      // Limit cache size
+      if (layoutCache.size > 10) {
+        const firstKey = layoutCache.keys().next().value;
+        if (firstKey) {
+          layoutCache.delete(firstKey);
+        }
+      }
+      
+      performanceMonitor.endTiming('layout-calculation');
+      return result;
+    }, [program_id]);
+
+    useEffect(() => {
+      let isCancelled = false;
+      
+      const fetchCourses = async () => {
+        try {
+          performanceMonitor.startTiming('program-courses-fetch');
+          const { data: courses, error } = await supabase
+            .from("course_programs")
+            .select(
+              `
+        course_code,
+        courses (
+        *
+        )
+      `
+            )
+            .eq("program_id", program_id);
+          performanceMonitor.endTiming('program-courses-fetch');
+
+          if (error || isCancelled) {
+            console.error("Error fetching courses:", error);
+            return;
+          }
+
+          // Process courses
+          const allCourses: Course[] = [];
+          courses?.forEach((record) => {
+            const courseOrCourses = record.courses as Course | Course[];
+
+            if (Array.isArray(courseOrCourses)) {
+              allCourses.push(...courseOrCourses);
+            } else if (courseOrCourses && courseOrCourses.code) {
+              allCourses.push(courseOrCourses);
+            }
+          });
+
+          const filteredCourses = allCourses.filter(
+            (c): c is Course => !!c && !!c.code
+          );
+
+          if (isCancelled) return;
+
+          // Store courses data for reference
+          coursesDataRef.current = filteredCourses;
+
+          // Calculate layout with memoization
+          const { nodes: generatedNodes, edges: edgesList } = calculateLayout(filteredCourses);
+
+          setNodes(generatedNodes);
+          setEdges(edgesList);
+          setLoading(false);
+        } catch (error) {
+          if (!isCancelled) {
+            console.error("Error in fetchCourses:", error);
+            setLoading(false);
+          }
+        }
+      };
+
+      fetchCourses();
+
+      return () => {
+        isCancelled = true;
+      };
+    }, [program_id, calculateLayout, setNodes, setEdges]);
+
+    // Optimized change handlers
+    const handleNodesChange = useCallback((changes: NodeChange[]) => {
+      onNodesChange(changes);
+    }, [onNodesChange]);
+
+    const handleEdgesChange = useCallback((changes: EdgeChange[]) => {
+      onEdgesChange(changes);
+    }, [onEdgesChange]);
+
+    const handleNodeClick: NodeMouseHandler = useCallback((_, node) => {
+      setSelectedNodeId(node.id);
+    }, []);
+
+
+
+    if (loading) return <p>Loading course graph...</p>;
+
+    const onRenderCallback = (id: string, phase: string, actualDuration: number) => {
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`🔍 ${id} (${phase}): ${actualDuration.toFixed(2)}ms`);
+      }
     };
 
-    fetchCourses();
-  }, [ program_id]);
-
-  if (loading) return <p>Loading course graph...</p>;
-
-  return (
-    <div style={{ width: "100%", height: "95vh" }}>
-      <ReactFlow
-        nodes={styledNodes}
-        edges={styledEdges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onNodeClick={(_, node) => setSelectedNodeId(node.id)}
-        fitView
-      >
-        <MiniMap />
-        <Controls />
-        <Background gap={16} />
-      </ReactFlow>
-    </div>
-  );
+    return (
+      <div style={{ width: "100%", height: "95vh" }}>
+        <Profiler id="ProgramDependencyGraph" onRender={onRenderCallback}>
+          <MemoizedReactFlow
+            nodes={styledNodes}
+            edges={styledEdges}
+            onNodesChange={handleNodesChange}
+            onEdgesChange={handleEdgesChange}
+            onNodeClick={handleNodeClick}
+            fitView
+            maxZoom={2}
+            minZoom={0.1}
+            defaultViewport={{ x: 0, y: 0, zoom: 1 }}
+          >
+            <MiniMap />
+            <Controls />
+            <Background gap={16} />
+          </MemoizedReactFlow>
+        </Profiler>
+      </div>
+    );
 }

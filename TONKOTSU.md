@@ -2,53 +2,53 @@
 This file contains important context about this repo for [Tonkotsu](https://www.tonkotsu.ai) and helps it work faster and generate better code.
 
 ## Project Structure
-This is a monorepo containing:
-- Python scraping scripts at the root level
-- Next.js web application in the `uommods/` directory
+This is a mixed Python/Next.js project:
+- Root directory contains Python scraping scripts for University of Manchester course data
+- `uommods/` contains a Next.js web application
 
-## Setup Commands
+## Commands
 
-### Python Environment (Root Level)
+### Initial Setup
+1. Python environment setup (for scraping scripts):
+   ```bash
+   python -m venv .venv
+   # Windows
+   .venv\Scripts\activate
+   # Unix/macOS
+   source .venv/bin/activate
+   pip install -r requirements.txt
+   ```
+
+2. Next.js setup (for web application):
+   ```bash
+   cd uommods
+   npm install
+   ```
+
+### Build
 ```bash
-# Create virtual environment (no specific convention in .gitignore)
-python -m venv venv
-
-# Activate virtual environment
-# Windows:
-venv\Scripts\activate
-# macOS/Linux:
-source venv/bin/activate
-
-# Install Python dependencies
-pip install -r requirements.txt
-```
-
-### Next.js Application (uommods/ directory)
-```bash
-cd uommods
-npm install
-```
-
-## Build Commands
-```bash
-# Next.js application
 cd uommods
 npm run build
 ```
 
-## Lint Commands
+### Lint
 ```bash
-# Next.js application
 cd uommods
 npm run lint
 ```
 
-## Test Commands
-No test framework is currently configured in this repository.
+### Tests
+No test framework is currently set up in this repository.
 
-## Dev Server Commands
+### Dev Server
 ```bash
-# Next.js application
 cd uommods
 npm run dev
 ```
+
+## Python Scripts
+- `marks_scraper.py` - PDF parsing for unit statistics
+- `scrape_course_data.py` - Web scraping for course data with Supabase integration
+
+## Environment Variables
+The Next.js app requires environment variables in `uommods/.env` (see `uommods/.env.template`)

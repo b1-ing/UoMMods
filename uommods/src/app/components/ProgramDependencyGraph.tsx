@@ -30,6 +30,12 @@ type Props = {
     selectedcourseid?: string;
 }
 
+type ErrorState = {
+    hasError: boolean;
+    message: string;
+    type: 'network' | 'not_found' | 'malformed_data' | 'unknown';
+};
+
 // Layout cache for expensive calculations
 const layoutCache = new Map<string, { nodes: Node[], edges: Edge[] }>();
 
@@ -88,6 +94,7 @@ export default function CourseFlow({program_id, selectedcourseid}: Props) {
     const [nodes, setNodes, onNodesChange] = useNodesState([]);
     const [edges, setEdges, onEdgesChange] = useEdgesState([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<ErrorState>({ hasError: false, message: '', type: 'unknown' });
     const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
     const [viewportBounds] = useState({ x: 0, y: 0, width: 1000, height: 800 });
     
@@ -96,6 +103,11 @@ export default function CourseFlow({program_id, selectedcourseid}: Props) {
     
     // Virtual viewport for performance
     const { nodes: virtualNodes, edges: virtualEdges } = useVirtualViewport(nodes, edges, viewportBounds);
+
+    // Reset error state when program_id changes
+    useEffect(() => {
+        setError({ hasError: false, message: '', type: 'unknown' });
+    }, [program_id]);
 
     // Memoized styled nodes to prevent unnecessary recalculations
     const styledNodes = useMemo(() => {
@@ -258,9 +270,22 @@ export default function CourseFlow({program_id, selectedcourseid}: Props) {
       let isCancelled = false;
       
       const fetchCourses = async () => {
+        if (!program_id?.trim()) {
+          setError({
+            hasError: true,
+            message: 'No program ID provided',
+            type: 'malformed_data'
+          });
+          setLoading(false);
+          return;
+        }
+
+        setLoading(true);
+        setError({ hasError: false, message: '', type: 'unknown' });
+
         try {
           performanceMonitor.startTiming('program-courses-fetch');
-          const { data: courses, error } = await supabase
+          const { data: courses, error: fetchError } = await supabase
             .from("course_programs")
             .select(
               `
@@ -273,8 +298,31 @@ export default function CourseFlow({program_id, selectedcourseid}: Props) {
             .eq("program_id", program_id);
           performanceMonitor.endTiming('program-courses-fetch');
 
-          if (error || isCancelled) {
-            console.error("Error fetching courses:", error);
+          if (isCancelled) return;
+
+          if (fetchError) {
+            console.error("Error fetching courses:", fetchError);
+            const errorType = fetchError.code === 'PGRST116' ? 'not_found' : 'network';
+            const errorMessage = fetchError.code === 'PGRST116' 
+              ? `Program "${program_id}" not found`
+              : `Failed to fetch program data: ${fetchError.message}`;
+            
+            setError({
+              hasError: true,
+              message: errorMessage,
+              type: errorType
+            });
+            setLoading(false);
+            return;
+          }
+
+          if (!courses || courses.length === 0) {
+            setError({
+              hasError: true,
+              message: `No courses found for program "${program_id}"`,
+              type: 'not_found'
+            });
+            setLoading(false);
             return;
           }
 
@@ -294,6 +342,16 @@ export default function CourseFlow({program_id, selectedcourseid}: Props) {
             (c): c is Course => !!c && !!c.code
           );
 
+          if (filteredCourses.length === 0) {
+            setError({
+              hasError: true,
+              message: `No valid courses found for program "${program_id}"`,
+              type: 'not_found'
+            });
+            setLoading(false);
+            return;
+          }
+
           if (isCancelled) return;
 
           // Store courses data for reference
@@ -308,6 +366,11 @@ export default function CourseFlow({program_id, selectedcourseid}: Props) {
         } catch (error) {
           if (!isCancelled) {
             console.error("Error in fetchCourses:", error);
+            setError({
+              hasError: true,
+              message: error instanceof Error ? error.message : 'An unexpected error occurred',
+              type: 'unknown'
+            });
             setLoading(false);
           }
         }
@@ -333,9 +396,56 @@ export default function CourseFlow({program_id, selectedcourseid}: Props) {
       setSelectedNodeId(node.id);
     }, []);
 
+    // Loading state
+    if (loading) {
+      return (
+        <div style={{ width: "100%", height: "95vh" }} className="flex items-center justify-center bg-gray-50">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading program dependency graph...</p>
+          </div>
+        </div>
+      );
+    }
 
+    // Error states
+    if (error.hasError) {
+      const errorIcon = error.type === 'not_found' ? '🔍' : '❌';
+      const retryButton = error.type === 'network' && (
+        <button 
+          onClick={() => window.location.reload()}
+          className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+        >
+          Retry
+        </button>
+      );
 
-    if (loading) return <p>Loading course graph...</p>;
+      return (
+        <div style={{ width: "100%", height: "95vh" }} className="flex items-center justify-center bg-red-50">
+          <div className="text-center">
+            <div className="text-4xl mb-2">{errorIcon}</div>
+            <p className="text-red-600 font-semibold mb-1">Failed to load program graph</p>
+            <p className="text-red-500 text-sm">{error.message}</p>
+            {retryButton}
+          </div>
+        </div>
+      );
+    }
+
+    // Empty state (program exists but has no courses)
+    if (coursesDataRef.current.length === 0) {
+      return (
+        <div style={{ width: "100%", height: "95vh" }} className="flex items-center justify-center bg-gray-50">
+          <div className="text-center">
+            <div className="text-4xl mb-2">📚</div>
+            <p className="text-gray-600 font-semibold mb-1">No Courses Found</p>
+            <p className="text-gray-500 text-sm">
+              Program {program_id} has no courses to display.
+            </p>
+          </div>
+        </div>
+      );
+    }
 
     const onRenderCallback = (id: string, phase: string, actualDuration: number) => {
       if (process.env.NODE_ENV === 'development') {

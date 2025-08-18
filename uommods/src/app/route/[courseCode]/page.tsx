@@ -66,7 +66,7 @@ const Page = async ({
         <h2 className="text-xl font-semibold">Course Dependency Graph</h2>
         <CourseDependencyGraph courseCode={course.code} />
 
-        <ProgramTabs initialProgramId="G400" selectedcourseid={course.code} />
+        <ProgramTabs initialProgramId="GG14" selectedcourseid={course.code} />
 
         <RatingsSection courseCode={course.code} />
       </div>

@@ -48,6 +48,10 @@ const Planner = ({ programs }: PlannerProps) => {
   const [openDrawer, setOpenDrawer] = useState<ColumnType | null>(null);
   const [columns, setColumns] =
     useState<Record<Year, Record<ColumnType, Course[]>>>(defaultColumns);
+  const [programSelections, setProgramSelections] = useState<
+    Record<string, Record<Year, Record<ColumnType, Course[]>>>
+  >({});
+  const [previousProgramCode, setPreviousProgramCode] = useState<string>("");
 
   const resetColumns = () => {
     setColumns(defaultColumns);
@@ -55,7 +59,9 @@ const Planner = ({ programs }: PlannerProps) => {
 
   const clearLocalStorageColumns = () => {
     localStorage.setItem("columns", JSON.stringify(defaultColumns));
+    localStorage.setItem("programSelections", JSON.stringify({}));
     resetColumns();
+    setProgramSelections({});
   };
 
   const fetchPreferences = async () => {
@@ -67,6 +73,9 @@ const Planner = ({ programs }: PlannerProps) => {
     );
     setColumns(
       (prev) => JSON.parse(localStorage.getItem("columns") ?? "null") ?? prev
+    );
+    setProgramSelections(
+      (prev) => JSON.parse(localStorage.getItem("programSelections") ?? "null") ?? prev
     );
     setIsPreferencesFetched(true);
   };
@@ -159,9 +168,28 @@ const Planner = ({ programs }: PlannerProps) => {
     if (!!selectedProgramCode) fetchCourses();
   }, [selectedProgramCode]);
 
+  // Handle program switching with state management
   useEffect(() => {
-    resetColumns();
-  }, [selectedProgramCode]);
+    if (!selectedProgramCode || !isPreferencesFetched) return;
+
+    // Save current program's selections before switching
+    if (previousProgramCode && previousProgramCode !== selectedProgramCode) {
+      setProgramSelections(prev => ({
+        ...prev,
+        [previousProgramCode]: { ...columns }
+      }));
+    }
+
+    // Load selections for the new program
+    const savedSelections = programSelections[selectedProgramCode];
+    if (savedSelections) {
+      setColumns(savedSelections);
+    } else {
+      resetColumns();
+    }
+
+    setPreviousProgramCode(selectedProgramCode);
+  }, [selectedProgramCode, isPreferencesFetched]);
 
   useEffect(() => {
     const storePreferences = async () => {
@@ -171,14 +199,25 @@ const Planner = ({ programs }: PlannerProps) => {
         selectedProgramCode.toString()
       );
       localStorage.setItem("columns", JSON.stringify(columns));
+      localStorage.setItem("programSelections", JSON.stringify(programSelections));
     };
     if (isPreferencesFetched) storePreferences();
-  }, [selectedYear, selectedProgramCode, columns, isPreferencesFetched]);
+  }, [selectedYear, selectedProgramCode, columns, programSelections, isPreferencesFetched]);
+
+  // Update programSelections whenever columns change
+  useEffect(() => {
+    if (selectedProgramCode && isPreferencesFetched) {
+      setProgramSelections(prev => ({
+        ...prev,
+        [selectedProgramCode]: { ...columns }
+      }));
+    }
+  }, [columns, selectedProgramCode, isPreferencesFetched]);
 
   useEffect(() => {
     if (!selectedProgramCode || !selectedYear || !courses) return;
 
-    // only populate compulsory courses if nothing has been added yet for that year
+    // Only populate compulsory courses if nothing has been added yet for that year
     const yearCols = columns[selectedYear];
     const hasAny = (["year", "sem1", "sem2"] as ColumnType[]).some(
       (col) => yearCols[col]?.length > 0

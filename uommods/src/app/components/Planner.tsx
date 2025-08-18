@@ -4,11 +4,11 @@ import React, { useEffect, useState } from "react";
 import { Program } from "@/lib/programs";
 import { Course } from "@/lib/mockcourses";
 import { Semester } from "@/lib/semesters";
-import PlannerControls, { Year } from "@/components/PlannerControls";
-import CourseColumn, { ColumnType } from "@/components/CourseColumn";
-import CourseDrawer from "@/components/CourseDrawer";
-import SummaryTable from "@/components/SummaryTable";
-import PlannerDialogs from "@/components/PlannerDialogs";
+import PlannerControls, { Year } from "@/app/components/PlannerControls";
+import CourseColumn, { ColumnType } from "@/app/components/CourseColumn";
+import CourseDrawer from "@/app/components/CourseDrawer";
+import SummaryTable from "@/app/components/SummaryTable";
+import PlannerDialogs from "@/app/components/PlannerDialogs";
 
 const defaultColumns = {
   1: {

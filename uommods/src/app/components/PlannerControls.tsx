@@ -1,7 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Program } from "@/lib/programs";
 import { RefreshCwIcon } from "lucide-react";
-import { Semester } from "@/lib/semesters";
 
 export type Year = 1 | 2 | 3;
 
@@ -11,10 +10,7 @@ interface PlannerControlsProps {
   setSelectedProgramCode: (code: string) => void;
   selectedYear: Year;
   setSelectedYear: (year: Year) => void;
-  selectedSemester: keyof typeof Semester;
-  setSelectedSemester: (semester: keyof typeof Semester) => void;
   onResetChoices: () => void;
-  isMobileView?: boolean;
 }
 
 export default function PlannerControls({
@@ -23,10 +19,7 @@ export default function PlannerControls({
   setSelectedProgramCode,
   selectedYear,
   setSelectedYear,
-  selectedSemester,
-  setSelectedSemester,
   onResetChoices,
-  isMobileView = false,
 }: PlannerControlsProps) {
   return (
     <>
@@ -72,21 +65,6 @@ export default function PlannerControls({
         </Button>
       )}
 
-      {isMobileView && selectedProgramCode && selectedYear && (
-        <select
-          className="border rounded px-3 py-2 font-bold"
-          value={selectedSemester}
-          onChange={(e) =>
-            setSelectedSemester(e.target.value as keyof typeof Semester)
-          }
-        >
-          {Object.keys(Semester).map((key) => (
-            <option key={key} value={key}>
-              {Semester[key as keyof typeof Semester]}
-            </option>
-          ))}
-        </select>
-      )}
     </>
   );
 }

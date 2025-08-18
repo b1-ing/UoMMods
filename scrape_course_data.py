@@ -506,6 +506,7 @@ def main():
 
     # Insert into Supabase (optional)
     for record in compiled_units:
+        record.pop("mandatory", None)
         insert_to_supabase(record, "courses", conflict_column="code")
 
     for record in compiled_units:

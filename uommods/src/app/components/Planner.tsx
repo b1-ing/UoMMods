@@ -1,31 +1,15 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Card, CardContent, CardTitle } from "@/components/ui/card";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-} from "@/components/ui/drawer";
-import { Button } from "@/components/ui/button";
 import { Program } from "@/lib/programs";
-import { RefreshCwIcon, Trash } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Course } from "@/lib/mockcourses";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { PrereqDisplay } from "@/app/components/PrereqDisplay";
-import Link from "next/link";
 import { Semester } from "@/lib/semesters";
+import PlannerControls, { Year } from "@/components/PlannerControls";
+import CourseColumn, { ColumnType } from "@/components/CourseColumn";
+import CourseDrawer from "@/components/CourseDrawer";
+import SummaryTable from "@/components/SummaryTable";
+import PlannerDialogs from "@/components/PlannerDialogs";
 
-type ColumnType = "year" | "sem1" | "sem2";
-export type Year = 1 | 2 | 3 ;
 const defaultColumns = {
   1: {
     year: [],
@@ -107,6 +91,18 @@ const Planner = ({ programs }: PlannerProps) => {
         addCourseToColumn(selectedYear, prereqCourse, targetColumn);
       }
     });
+
+    setPendingCourse(null);
+    setMissingPrereqs([]);
+    setPrereqDialogOpen(false);
+    setOpenDrawer(null);
+  };
+
+  const handleAddCourseOnly = () => {
+    if (!pendingCourse) return;
+    if (pendingCourse && pendingColumn) {
+      updateColumns(selectedYear, pendingColumn, pendingCourse);
+    }
 
     setPendingCourse(null);
     setMissingPrereqs([]);
@@ -248,6 +244,7 @@ const Planner = ({ programs }: PlannerProps) => {
       };
     });
   };
+  
   const addCourseToColumn = (
     year: Year,
     course: Course,
@@ -296,9 +293,11 @@ const Planner = ({ programs }: PlannerProps) => {
     });
     setOpenDrawer(null);
   };
+  
   function splitCourseCodes(codes: string): string[] {
     return codes.split(",");
   }
+  
   const getFilteredCourses = (type: string) => {
     if (!selectedProgramCode || !selectedYear) return [];
 
@@ -338,7 +337,6 @@ const Planner = ({ programs }: PlannerProps) => {
     );
   };
 
-
   function courseExistsInColumns(
       year: Year,
       code: string,
@@ -348,7 +346,6 @@ const Planner = ({ programs }: PlannerProps) => {
         column.some((course) => course?.code === code)
     );
   }
-
 
   // Build a summary of selected modules for the current program/year
   // Summary for all years, each with its columns
@@ -397,377 +394,89 @@ const Planner = ({ programs }: PlannerProps) => {
     return summaries;
   }, [columns, selectedProgramCode]);
 
-  function SummaryTableAllYears({
-    allSummary,
-    programs,
-    selectedProgramCode,
-  }: {
-    allSummary:
-      | {
-          year: Year;
-          columns: {
-            column: ColumnType;
-            courses: Course[];
-            totalCredits: number;
-          }[];
-        }[]
-      | null;
-    programs: Record<string, Program>;
-    selectedProgramCode: string;
-  }) {
-    if (!allSummary) return null;
-    const programTitle = programs[selectedProgramCode]?.title ?? "Program";
+  const handleOpenDrawer = (type: ColumnType) => {
+    setOpenDrawer(type);
+  };
 
-    return (
-      <Card className="mt-6">
-        <div className="flex items-center justify-center gap-2">
-          <div className="flex items-baseline gap-2">
-            <CardTitle className="m-0">
-              Full Summary for {programTitle}
-            </CardTitle>
-            <Button
-              size="sm"
-              onClick={() => downloadCsv(allYearsSummary!, programTitle)}
-            >
-              Export CSV
-            </Button>
-          </div>
-        </div>
+  const handleSelectCourse = (course: Course, type: ColumnType) => {
+    addCourseToColumn(course.level as Year, course, type);
+  };
 
-        <CardContent className="overflow-x-auto">
-          {allSummary.map(({ year, columns }) => (
-            <div key={year} className="mb-6">
-              <div className="font-bold text-lg mb-2">Year {year}</div>
-              <table className="w-full border-collapse mb-4">
-                <thead>
-                  <tr>
-                    <th className="border p-2 text-left">Column</th>
-                    <th className="border p-2 text-left">Course Code</th>
-                    <th className="border p-2 text-left">Title</th>
-                    <th className="border p-2 text-left">Credits</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {columns.map(({ column, courses, totalCredits }) => (
-                    <React.Fragment key={`${year}-${column}`}>
-                      {courses.map((course, idx) => (
-                        <tr
-                          key={`${year}-${column}-${course.code}-${idx}`}
-                          className=""
-                        >
-                          <td className="border p-2 align-top">
-                            {column === "year"
-                              ? "Year-long"
-                              : column === "sem1"
-                              ? "Semester 1"
-                              : "Semester 2"}
-                          </td>
-                          <td className="border p-2">{course.code}</td>
-                          <td className="border p-2">{course.title}</td>
-                          <td className="border p-2">{course.credits}</td>
-                        </tr>
-                      ))}
-                      <tr className="bg-gray-100">
-                        <td className="border p-2 font-semibold">
-                          {column === "year"
-                            ? "Year-long total"
-                            : column === "sem1"
-                            ? "Semester 1 total"
-                            : "Semester 2 total"}
-                        </td>
-                        <td className="border p-2" />
-                        <td className="border p-2" />
-                        <td className="border p-2 font-semibold">
-                          {totalCredits}
-                        </td>
-                      </tr>
-                    </React.Fragment>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
-    );
-  }
-
-  // Flatten the all-years summary into CSV rows
-  function buildCsvRows(
-    allSummary: {
-      year: Year;
-      columns: {
-        column: ColumnType;
-        courses: Course[];
-        totalCredits: number;
-      }[];
-    }[]
-  ) {
-    const rows: string[][] = [];
-    // Header
-    rows.push(["Year", "Column", "Course Code", "Title", "Credits"]);
-
-    allSummary.forEach(({ year, columns }) => {
-      columns.forEach(({ column, courses }) => {
-        courses.forEach((course) => {
-          rows.push([
-            String(year),
-            column === "year"
-              ? "Year-long"
-              : column === "sem1"
-              ? "Semester 1"
-              : "Semester 2",
-            course.code,
-            course.title,
-            String(course.credits),
-          ]);
-        });
-        // subtotal row per column
-        rows.push([
-          String(year),
-          column === "year"
-            ? "Year-long total"
-            : column === "sem1"
-            ? "Semester 1 total"
-            : "Semester 2 total",
-          "",
-          "",
-          String(courses.reduce((sum, c) => sum + (c?.credits ?? 0), 0)),
-        ]);
-      });
-    });
-
-    return rows;
-  }
-
-  // Converts rows to a CSV blob and triggers download
-  function downloadCsv(
-    allSummary: {
-      year: Year;
-      columns: {
-        column: ColumnType;
-        courses: Course[];
-        totalCredits: number;
-      }[];
-    }[],
-    programTitle: string
-  ) {
-    const rows = buildCsvRows(allSummary);
-    const csvContent = rows
-      .map((r) =>
-        r
-          .map((cell) => {
-            // escape quotes
-            const escaped = String(cell).replace(/"/g, '""');
-            return `"${escaped}"`;
-          })
-          .join(",")
-      )
-      .join("\r\n");
-
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const filename = `${programTitle
-      .replace(/\s+/g, "_")
-      .toLowerCase()}_summary_all_years.csv`;
-
-    // create invisible link and click
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    a.style.display = "none";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }
-
-  const renderColumn = (label: string | null, type: ColumnType) => {
-    const key = `y${selectedYear}${type}cred` as keyof Program;
-    const program = programs[selectedProgramCode];
-    const requiredCredits = program
-      ? (program[key as keyof Program] as number)
-      : 0;
-    const yearColumns = columns[selectedYear];
-    const currentCredits = yearColumns?.[type]
-      ? yearColumns[type].reduce(
-          (sum, course) => sum + (course?.credits ?? 0),
-          0
-        )
-      : 0;
-
-
-    return (
-      <Card className="w-full sm:w-1/3 p-4 flex flex-col gap-4 m-1">
-        <div className="flex justify-between items-center">
-          <CardTitle>
-            {label ? label + " –" : null} {currentCredits}/{requiredCredits}{" "}
-            credits
-          </CardTitle>
-          <Button size="sm" onClick={() => setOpenDrawer(type)}>
-            + Add
-          </Button>
-        </div>
-
-        <CardContent className="space-y-2 p-2">
-          {(columns[selectedYear][type] ?? []).map((course) =>
-            course ? (
-              <Link
-                href={`/route/${course.code}`}
-                key={`${type}-${course.code ?? "not found"}`}
-              >
-                <Card className="p-2 m-2">
-                  <div className="flex justify-between items-start">
-                    <div className="font-semibold">
-                      {course.code ?? "not found"} – {course.title}
-                    </div>
-                    <div>
-                      {course.mandatory === "Optional" ? (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            removeCourseFromColumn(course, type);
-                          }}
-                        >
-                          <Trash />
-                        </Button>
-                      ) : (
-                        <span></span>
-                      )}
-                    </div>
-                  </div>
-                  {course.prerequisites_list && (
-                    <PrereqDisplay
-                      prerequisites={course.prerequisites_list}
-                      corequisites={course.corequisites_list}
-                      columns={columns[selectedYear]}
-                    />
-                  )}
-                  <div className="text-sm text-muted-foreground">
-                    {course.credits} units
-                  </div>
-                </Card>
-              </Link>
-            ) : null
-          )}
-        </CardContent>
-
-        <Drawer
-          open={openDrawer === type}
-          onOpenChange={() => setOpenDrawer(null)}
-        >
-          <DrawerContent className="max-h-[80vh] overflow-hidden flex flex-col">
-            <DrawerHeader>
-              <DrawerTitle>Select Course for {label}</DrawerTitle>
-            </DrawerHeader>
-
-            <div className="flex-1 overflow-y-auto px-4">
-              <ScrollArea className="h-full">
-                <div className="space-y-2 pb-4">
-                  {getFilteredCourses(type).map((course) => (
-                    <Card
-                      key={course.code}
-                      className="p-2 cursor-pointer hover:bg-muted"
-                      onClick={() =>
-                        addCourseToColumn(course.level as Year, course, type)
-                      }
-                    >
-                      <div className="font-medium">
-                        {course.code}
-                        <p>
-                          {course.title} ({course.credits} units)
-                        </p>
-                      </div>
-                      {course.prerequisites_list && (
-                        <PrereqDisplay
-                          prerequisites={course.prerequisites_list}
-                          corequisites={course.corequisites_list}
-                          columns={columns[selectedYear]}
-                        />
-                      )}
-                    </Card>
-                  ))}
-                </div>
-              </ScrollArea>
-            </div>
-          </DrawerContent>
-        </Drawer>
-      </Card>
-    );
+  const getDrawerLabel = (type: ColumnType) => {
+    switch (type) {
+      case "year":
+        return "Year-Long";
+      case "sem1":
+        return "Semester 1";
+      case "sem2":
+        return "Semester 2";
+      default:
+        return null;
+    }
   };
 
   const renderColumnsMobile = () => {
     return (
-      <>
-        <select
-          className="border rounded px-3 py-2 font-bold"
-          value={selectedSemester}
-          onChange={(e) =>
-            setSelectedSemester(e.target.value as keyof typeof Semester)
-          }
-        >
-          {Object.keys(Semester).map((key) => (
-            <option key={key} value={key}>
-              {Semester[key as keyof typeof Semester]}
-            </option>
-          ))}
-        </select>
-        {renderColumn(null, selectedSemester.toString() as ColumnType)}
-      </>
+      <CourseColumn
+        label={null}
+        type={selectedSemester.toString() as ColumnType}
+        selectedYear={selectedYear}
+        selectedProgramCode={selectedProgramCode}
+        programs={programs}
+        columns={columns}
+        onAddCourse={handleOpenDrawer}
+        onRemoveCourse={removeCourseFromColumn}
+      />
     );
   };
 
   return (
     <div className="max-w-screen-xl mx-auto px-6 py-8 space-y-8">
-      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium">Course of Study</label>
-            <select
-              className="border rounded px-3 py-2"
-              value={selectedProgramCode}
-              onChange={(e) => setSelectedProgramCode(e.target.value)}
-            >
-              <option value="">Select Program</option>
-              {Object.values(programs).map((prog) => (
-                <option key={prog.program_id} value={prog.program_id}>
-                  {prog.title}
-                </option>
-              ))}
-              ))
-            </select>
-          </div>
+      <PlannerControls
+        programs={programs}
+        selectedProgramCode={selectedProgramCode}
+        setSelectedProgramCode={setSelectedProgramCode}
+        selectedYear={selectedYear}
+        setSelectedYear={setSelectedYear}
+        selectedSemester={selectedSemester}
+        setSelectedSemester={setSelectedSemester}
+        onResetChoices={clearLocalStorageColumns}
+        isMobileView={true}
+      />
 
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium">Year of Study</label>
-            <select
-              className="border rounded px-3 py-2"
-              value={selectedYear}
-              onChange={(e) => setSelectedYear(Number(e.target.value) as Year)}
-            >
-              <option value="">Select Year</option>
-              {[1, 2, 3].map((year) => (
-                <option key={year} value={year}>
-                  Year {year}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex items-end"></div>
-        </div>
-      </div>
       {selectedProgramCode && selectedYear ? (
         <>
-          <Button onClick={clearLocalStorageColumns}>
-            <RefreshCwIcon /> Reset Choices
-          </Button>
           <div className="hidden sm:flex flex-col sm:flex-row gap-4">
-            {renderColumn("Year-Long", "year")}
-            {renderColumn("Semester 1", "sem1")}
-            {renderColumn("Semester 2", "sem2")}
+            <CourseColumn
+              label="Year-Long"
+              type="year"
+              selectedYear={selectedYear}
+              selectedProgramCode={selectedProgramCode}
+              programs={programs}
+              columns={columns}
+              onAddCourse={handleOpenDrawer}
+              onRemoveCourse={removeCourseFromColumn}
+            />
+            <CourseColumn
+              label="Semester 1"
+              type="sem1"
+              selectedYear={selectedYear}
+              selectedProgramCode={selectedProgramCode}
+              programs={programs}
+              columns={columns}
+              onAddCourse={handleOpenDrawer}
+              onRemoveCourse={removeCourseFromColumn}
+            />
+            <CourseColumn
+              label="Semester 2"
+              type="sem2"
+              selectedYear={selectedYear}
+              selectedProgramCode={selectedProgramCode}
+              programs={programs}
+              columns={columns}
+              onAddCourse={handleOpenDrawer}
+              onRemoveCourse={removeCourseFromColumn}
+            />
           </div>
           <div className="flex flex-col sm:hidden gap-4">
             {renderColumnsMobile()}
@@ -775,69 +484,39 @@ const Planner = ({ programs }: PlannerProps) => {
 
           <div className="hidden md:block">
             {selectedProgramCode && allYearsSummary && (
-              <SummaryTableAllYears
+              <SummaryTable
                 allSummary={allYearsSummary}
                 programs={programs}
                 selectedProgramCode={selectedProgramCode}
               />
             )}
           </div>
+
+          {openDrawer && (
+            <CourseDrawer
+              open={openDrawer !== null}
+              onOpenChange={() => setOpenDrawer(null)}
+              label={getDrawerLabel(openDrawer)}
+              type={openDrawer}
+              selectedYear={selectedYear}
+              columns={columns}
+              filteredCourses={getFilteredCourses(openDrawer)}
+              onSelectCourse={handleSelectCourse}
+            />
+          )}
         </>
       ) : null}
 
-      {showDuplicateDialog && (
-        <Dialog open={true} onOpenChange={() => setShowDuplicateDialog(false)}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Duplicate course</DialogTitle>
-              <DialogDescription>
-                This course has already been added.
-              </DialogDescription>
-            </DialogHeader>
-          </DialogContent>
-        </Dialog>
-      )}
-      <Dialog open={prereqDialogOpen} onOpenChange={setPrereqDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Missing Prerequisites</DialogTitle>
-            <div>
-              {pendingCourse?.code} has unmet prerequisites:
-              <ul className="mt-2 list-disc ml-4 text-muted-foreground">
-                {missingPrereqs.map((c) => (
-                  <li key={c.code}>
-                    {c.code} – {c.title}
-                  </li>
-                ))}
-              </ul>
-              <br />
-              Would you like to add just the course, or both the course and
-              prerequisites?
-            </div>
-          </DialogHeader>
-          <div className="flex justify-end gap-2 mt-4">
-            <Button
-              variant="secondary"
-              onClick={() => {
-                if (!pendingCourse) return;
-                if (pendingCourse && pendingColumn) {
-                  updateColumns(selectedYear, pendingColumn, pendingCourse);
-                }
-
-                setPendingCourse(null);
-                setMissingPrereqs([]);
-                setPrereqDialogOpen(false);
-                setOpenDrawer(null);
-              }}
-            >
-              Add Course Only
-            </Button>
-            <Button onClick={handleAddWithPrereqs}>
-              Add with Prerequisites
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <PlannerDialogs
+        showDuplicateDialog={showDuplicateDialog}
+        setShowDuplicateDialog={setShowDuplicateDialog}
+        prereqDialogOpen={prereqDialogOpen}
+        setPrereqDialogOpen={setPrereqDialogOpen}
+        pendingCourse={pendingCourse}
+        missingPrereqs={missingPrereqs}
+        onAddCourseOnly={handleAddCourseOnly}
+        onAddWithPrereqs={handleAddWithPrereqs}
+      />
     </div>
   );
 };

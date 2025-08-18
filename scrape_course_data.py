@@ -9,6 +9,7 @@ import string
 # Uncomment these lines if you want to use Supabase
 from supabase import create_client, Client
 
+
 # ----------- CONFIG -----------
 
 load_dotenv("uommods/.env")

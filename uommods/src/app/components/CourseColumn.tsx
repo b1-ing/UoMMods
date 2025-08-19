@@ -47,7 +47,7 @@ export default function CourseColumn({
     <Card className="w-full sm:w-1/3 p-4 flex flex-col gap-4 m-1">
       <div className="flex justify-between items-center">
         <CardTitle>
-          {label ? label + " –" : null} {currentCredits}/{requiredCredits}{" "}
+          {label ? `${label} –` : type === "year" ? "Year-Long –" : type === "sem1" ? "Semester 1 –" : "Semester 2 –"} {currentCredits}/{requiredCredits}{" "}
           credits
         </CardTitle>
         <Button size="sm" onClick={() => onAddCourse(type)}>

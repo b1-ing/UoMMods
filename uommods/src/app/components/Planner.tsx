@@ -10,6 +10,24 @@ import CourseDrawer from "@/app/components/CourseDrawer";
 import SummaryTable from "@/app/components/SummaryTable";
 import PlannerDialogs from "@/app/components/PlannerDialogs";
 
+// Custom hook for responsive behavior
+const useIsMobile = () => {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkIsMobile = () => {
+      setIsMobile(window.innerWidth < 640); // sm breakpoint
+    };
+
+    checkIsMobile();
+    window.addEventListener('resize', checkIsMobile);
+
+    return () => window.removeEventListener('resize', checkIsMobile);
+  }, []);
+
+  return isMobile;
+};
+
 const defaultColumns = {
   1: {
     year: [],
@@ -33,6 +51,7 @@ type PlannerProps = {
 };
 
 const Planner = ({ programs }: PlannerProps) => {
+  const isMobile = useIsMobile();
   const [courses, setCourses] = useState<Record<string, Course>>({});
   const [selectedSemester, setSelectedSemester] =
       useState<keyof typeof Semester>("sem1");
@@ -458,7 +477,7 @@ const Planner = ({ programs }: PlannerProps) => {
     return (
         <CourseColumn
             label={null}
-            type={selectedSemester.toString() as ColumnType}
+            type={selectedSemester as ColumnType}
             selectedYear={selectedYear}
             selectedProgramCode={selectedProgramCode}
             programs={programs}
@@ -480,7 +499,7 @@ const Planner = ({ programs }: PlannerProps) => {
             selectedSemester={selectedSemester}
             setSelectedSemester={setSelectedSemester}
             onResetChoices={clearLocalStorageColumns}
-            isMobileView={true}
+            isMobileView={isMobile}
         />
 
         {selectedProgramCode && selectedYear ? (

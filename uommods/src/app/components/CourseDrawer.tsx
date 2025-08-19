@@ -23,50 +23,52 @@ interface CourseDrawerProps {
 }
 
 export default function CourseDrawer({
-  open,
-  onOpenChange,
-  label,
-  type,
-  selectedYear,
-  columns,
-  filteredCourses,
-  onSelectCourse,
-}: CourseDrawerProps) {
+                                       open,
+                                       onOpenChange,
+                                       label,
+                                       type,
+                                       selectedYear,
+                                       columns,
+                                       filteredCourses,
+                                       onSelectCourse,
+                                     }: CourseDrawerProps) {
   return (
-    <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerContent className="max-h-[80vh] overflow-hidden flex flex-col">
-        <DrawerHeader>
-          <DrawerTitle>Select Course for {label}</DrawerTitle>
-        </DrawerHeader>
+      <Drawer open={open} onOpenChange={onOpenChange}>
+        <DrawerContent className="max-h-[80vh] overflow-hidden flex flex-col">
+          <DrawerHeader>
+            <DrawerTitle>Select Course for {label}</DrawerTitle>
+          </DrawerHeader>
 
-        <div className="flex-1 overflow-y-auto px-4">
-          <ScrollArea className="h-full">
-            <div className="space-y-2 pb-4">
-              {filteredCourses.map((course) => (
-                <Card
-                  key={course.code}
-                  className="p-2 cursor-pointer hover:bg-muted"
-                  onClick={() => onSelectCourse(course, type)}
-                >
-                  <div className="font-medium">
-                    {course.code}
-                    <p>
-                      {course.title} ({course.credits} units)
-                    </p>
-                  </div>
-                  {course.prerequisites_list && (
-                    <PrereqDisplay
-                      prerequisites={course.prerequisites_list}
-                      corequisites={course.corequisites_list}
-                      columns={columns[selectedYear]}
-                    />
-                  )}
-                </Card>
-              ))}
-            </div>
-          </ScrollArea>
-        </div>
-      </DrawerContent>
-    </Drawer>
+          <div className="flex-1 overflow-y-auto px-4">
+            <ScrollArea className="h-full">
+              <div className="space-y-2 pb-4">
+                {filteredCourses
+                    .filter(course => course.mandatory !== "Optional")
+                    .map((course) => (
+                        <Card
+                            key={course.code}
+                            className="p-2 cursor-pointer hover:bg-muted"
+                            onClick={() => onSelectCourse(course, type)}
+                        >
+                          <div className="font-medium">
+                            {course.code}
+                            <p>
+                              {course.title} ({course.credits} units)
+                            </p>
+                          </div>
+                          {course.prerequisites_list && (
+                              <PrereqDisplay
+                                  prerequisites={course.prerequisites_list}
+                                  corequisites={course.corequisites_list}
+                                  columns={columns[selectedYear]}
+                              />
+                          )}
+                        </Card>
+                    ))}
+              </div>
+            </ScrollArea>
+          </div>
+        </DrawerContent>
+      </Drawer>
   );
 }

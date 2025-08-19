@@ -35,7 +35,7 @@ type PlannerProps = {
 const Planner = ({ programs }: PlannerProps) => {
   const [courses, setCourses] = useState<Record<string, Course>>({});
   const [selectedSemester, setSelectedSemester] =
-    useState<keyof typeof Semester>("sem1");
+      useState<keyof typeof Semester>("sem1");
   const [selectedYear, setSelectedYear] = useState<Year>(Number("") as Year);
   const [selectedProgramCode, setSelectedProgramCode] = useState<string>("");
   const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
@@ -44,12 +44,12 @@ const Planner = ({ programs }: PlannerProps) => {
   const [prereqDialogOpen, setPrereqDialogOpen] = useState(false);
   const [pendingColumn, setPendingColumn] = useState<ColumnType>("year");
   const [isPreferencesFetched, setIsPreferencesFetched] =
-    useState<boolean>(false);
+      useState<boolean>(false);
   const [openDrawer, setOpenDrawer] = useState<ColumnType | null>(null);
   const [columns, setColumns] =
-    useState<Record<Year, Record<ColumnType, Course[]>>>(defaultColumns);
+      useState<Record<Year, Record<ColumnType, Course[]>>>(defaultColumns);
   const [programSelections, setProgramSelections] = useState<
-    Record<string, Record<Year, Record<ColumnType, Course[]>>>
+      Record<string, Record<Year, Record<ColumnType, Course[]>>>
   >({});
   const [previousProgramCode, setPreviousProgramCode] = useState<string>("");
 
@@ -66,16 +66,16 @@ const Planner = ({ programs }: PlannerProps) => {
 
   const fetchPreferences = async () => {
     setSelectedYear(
-      (prev) => Number(localStorage.getItem("selectedYear") ?? prev) as Year
+        (prev) => Number(localStorage.getItem("selectedYear") ?? prev) as Year
     );
     setSelectedProgramCode(
-      (prev) => localStorage.getItem("selectedProgramCode") ?? prev
+        (prev) => localStorage.getItem("selectedProgramCode") ?? prev
     );
     setColumns(
-      (prev) => JSON.parse(localStorage.getItem("columns") ?? "null") ?? prev
+        (prev) => JSON.parse(localStorage.getItem("columns") ?? "null") ?? prev
     );
     setProgramSelections(
-      (prev) => JSON.parse(localStorage.getItem("programSelections") ?? "null") ?? prev
+        (prev) => JSON.parse(localStorage.getItem("programSelections") ?? "null") ?? prev
     );
     setIsPreferencesFetched(true);
   };
@@ -127,7 +127,7 @@ const Planner = ({ programs }: PlannerProps) => {
   useEffect(() => {
     const fetchCourses = async () => {
       const response = await fetch(
-        `/api/courses?programCode=${selectedProgramCode}`
+          `/api/courses?programCode=${selectedProgramCode}`
       );
       if (!response.ok) {
         console.log("Error fetching courses: ", response.text);
@@ -150,9 +150,9 @@ const Planner = ({ programs }: PlannerProps) => {
               }
             });
           } else if (
-            courses &&
-            typeof courses === "object" &&
-            "code" in courses
+              courses &&
+              typeof courses === "object" &&
+              "code" in courses
           ) {
             const singleCourse = courses as Course;
             courseMap[singleCourse.code] = {
@@ -189,14 +189,14 @@ const Planner = ({ programs }: PlannerProps) => {
     }
 
     setPreviousProgramCode(selectedProgramCode);
-  }, [selectedProgramCode, isPreferencesFetched, columns, previousProgramCode, programSelections]);
+  }, [selectedProgramCode, isPreferencesFetched]);
 
   useEffect(() => {
     const storePreferences = async () => {
       localStorage.setItem("selectedYear", selectedYear.toString());
       localStorage.setItem(
-        "selectedProgramCode",
-        selectedProgramCode.toString()
+          "selectedProgramCode",
+          selectedProgramCode.toString()
       );
       localStorage.setItem("columns", JSON.stringify(columns));
       localStorage.setItem("programSelections", JSON.stringify(programSelections));
@@ -214,80 +214,67 @@ const Planner = ({ programs }: PlannerProps) => {
     }
   }, [columns, selectedProgramCode, isPreferencesFetched]);
 
-  // Populate compulsory courses for all years when program changes or courses are loaded
   useEffect(() => {
-    if (!selectedProgramCode || !courses || !isPreferencesFetched) return;
+    if (!selectedProgramCode || !selectedYear || !courses) return;
 
-    const populateCompulsoryCourses = () => {
+    // Only populate compulsory courses if nothing has been added yet for that year
+    const yearCols = columns[selectedYear];
+    const hasAny = (["year", "sem1", "sem2"] as ColumnType[]).some(
+        (col) => yearCols[col]?.length > 0
+    );
+
+    const addCompulsoryCourses = () => {
       const program = programs[selectedProgramCode as keyof typeof programs];
-      if (!program) return;
+      if (!program || !selectedYear) return;
 
-      const toCourse = (code: string): Course | null => {
-        const course = courses[code];
-        return course ? { ...course, mandatory: "Compulsory" } : null;
+      const newColumns: Record<ColumnType, Course[]> = {
+        year: [...columns[selectedYear]["year"]],
+        sem1: [...columns[selectedYear]["sem1"]],
+        sem2: [...columns[selectedYear]["sem2"]],
       };
+
+      const toCourse = (code: string): Course | null => courses[code] ?? null;
 
       const safeMap = (arr: string[]) =>
-        arr.map(toCourse).filter((course): course is Course => course !== null);
+          arr.map(toCourse).filter((course): course is Course => course !== null);
 
-      const compulsoryColumns = {
-        1: {
-          year: safeMap(program.firstyrfy || []),
-          sem1: safeMap(program.firstyrs1comp || []),
-          sem2: safeMap(program.firstyrs2comp || []),
-        },
-        2: {
-          year: safeMap(program.secondyrfy || []),
-          sem1: safeMap(program.secondyrs1comp || []),
-          sem2: safeMap(program.secondyrs2comp || []),
-        },
-        3: {
-          year: safeMap(program.thirdyrfy || []),
-          sem1: safeMap(program.thirdyrs1comp || []),
-          sem2: safeMap(program.thirdyrs2comp || []),
-        },
-      };
+      switch (selectedYear) {
+        case 1:
+          newColumns.year = safeMap(program.firstyrfy);
+          newColumns.sem1 = safeMap(program.firstyrs1comp);
+          newColumns.sem2 = safeMap(program.firstyrs2comp);
+          break;
+        case 2:
+          newColumns.year = safeMap(program.secondyrfy);
+          newColumns.sem1 = safeMap(program.secondyrs1comp);
+          newColumns.sem2 = safeMap(program.secondyrs2comp);
+          break;
+        case 3:
+          newColumns.year = safeMap(program.thirdyrfy);
+          newColumns.sem1 = safeMap(program.thirdyrs1comp);
+          newColumns.sem2 = safeMap(program.thirdyrs2comp);
+          break;
+        default:
+          return;
+      }
 
-      // Merge with existing user selections, preserving user choices
       setColumns((prev) => {
-        const merged = { ...prev };
-        
-        ([1, 2, 3] as Year[]).forEach((year) => {
-          (["year", "sem1", "sem2"] as ColumnType[]).forEach((col) => {
-            const compulsory = compulsoryColumns[year][col];
-            const existing = prev[year]?.[col] || [];
-            
-            // Find existing user-added optional courses (non-compulsory)
-            const optionalCourses = existing.filter(
-              course => course.mandatory === "Optional"
-            );
-            
-            // Combine compulsory + optional, avoiding duplicates
-            const combined = [...compulsory];
-            optionalCourses.forEach(course => {
-              if (!combined.some(c => c.code === course.code)) {
-                combined.push(course);
-              }
-            });
-            
-            merged[year] = {
-              ...merged[year],
-              [col]: combined,
-            };
-          });
-        });
-        
-        return merged;
+        return {
+          ...prev,
+          [selectedYear]: { ...prev[selectedYear], ...newColumns },
+        };
       });
     };
 
-    populateCompulsoryCourses();
-  }, [selectedProgramCode, courses, programs, isPreferencesFetched]);
+    if (!hasAny) {
+      addCompulsoryCourses();
+    }
+  }, [selectedProgramCode, selectedYear, courses, columns, programs]);
 
   const updateColumns = (
-    year: Year,
-    column: ColumnType,
-    course: Course | null
+      year: Year,
+      column: ColumnType,
+      course: Course | null
   ) => {
     setColumns((prev) => {
       return {
@@ -296,11 +283,11 @@ const Planner = ({ programs }: PlannerProps) => {
       };
     });
   };
-  
+
   const addCourseToColumn = (
-    year: Year,
-    course: Course,
-    column: ColumnType
+      year: Year,
+      course: Course,
+      column: ColumnType
   ) => {
     if (courseExistsInColumns(year, course.code, columns)) {
       setOpenDrawer(null);
@@ -309,13 +296,13 @@ const Planner = ({ programs }: PlannerProps) => {
     }
 
     const prereqCodes = course.corequisites_list
-      ? splitCourseCodes(course.corequisites_list)
-      : [];
+        ? splitCourseCodes(course.corequisites_list)
+        : [];
 
     const missing = prereqCodes
-      .filter((code) => !courseExistsInColumns(year, code, columns))
-      .map((code) => courses[code])
-      .filter(Boolean);
+        .filter((code) => !courseExistsInColumns(year, code, columns))
+        .map((code) => courses[code])
+        .filter(Boolean);
 
     if (missing.length > 0) {
       setPendingCourse(course);
@@ -337,7 +324,7 @@ const Planner = ({ programs }: PlannerProps) => {
         [selectedYear]: {
           ...prev[selectedYear],
           [column]: prev[selectedYear][column].filter(
-            (c) => c.code !== course.code
+              (c) => c.code !== course.code
           ),
         },
       };
@@ -345,11 +332,11 @@ const Planner = ({ programs }: PlannerProps) => {
     });
     setOpenDrawer(null);
   };
-  
+
   function splitCourseCodes(codes: string): string[] {
     return codes.split(",");
   }
-  
+
   const getFilteredCourses = (type: string) => {
     if (!selectedProgramCode || !selectedYear) return [];
 
@@ -415,26 +402,26 @@ const Planner = ({ programs }: PlannerProps) => {
 
     const summaries: YearSummary[] = ([1, 2, 3] as Year[]).map((yr) => {
       const yearCols =
-        columns[yr] ||
-        ({
-          year: [],
-          sem1: [],
-          sem2: [],
-        } as Record<ColumnType, Course[]>);
+          columns[yr] ||
+          ({
+            year: [],
+            sem1: [],
+            sem2: [],
+          } as Record<ColumnType, Course[]>);
 
       const columnSummaries = (["year", "sem1", "sem2"] as ColumnType[]).map(
-        (col) => {
-          const coursesInCol = yearCols[col] ?? [];
-          const totalCredits = coursesInCol.reduce(
-            (sum, c) => sum + (c?.credits ?? 0),
-            0
-          );
-          return {
-            column: col,
-            courses: coursesInCol.filter(Boolean) as Course[],
-            totalCredits,
-          };
-        }
+          (col) => {
+            const coursesInCol = yearCols[col] ?? [];
+            const totalCredits = coursesInCol.reduce(
+                (sum, c) => sum + (c?.credits ?? 0),
+                0
+            );
+            return {
+              column: col,
+              courses: coursesInCol.filter(Boolean) as Course[],
+              totalCredits,
+            };
+          }
       );
 
       return {
@@ -469,107 +456,107 @@ const Planner = ({ programs }: PlannerProps) => {
 
   const renderColumnsMobile = () => {
     return (
-      <CourseColumn
-        label={null}
-        type={selectedSemester.toString() as ColumnType}
-        selectedYear={selectedYear}
-        selectedProgramCode={selectedProgramCode}
-        programs={programs}
-        columns={columns}
-        onAddCourse={handleOpenDrawer}
-        onRemoveCourse={removeCourseFromColumn}
-      />
+        <CourseColumn
+            label={null}
+            type={selectedSemester.toString() as ColumnType}
+            selectedYear={selectedYear}
+            selectedProgramCode={selectedProgramCode}
+            programs={programs}
+            columns={columns}
+            onAddCourse={handleOpenDrawer}
+            onRemoveCourse={removeCourseFromColumn}
+        />
     );
   };
 
   return (
-    <div className="max-w-screen-xl mx-auto px-6 py-8 space-y-8">
-      <PlannerControls
-        programs={programs}
-        selectedProgramCode={selectedProgramCode}
-        setSelectedProgramCode={setSelectedProgramCode}
-        selectedYear={selectedYear}
-        setSelectedYear={setSelectedYear}
-        selectedSemester={selectedSemester}
-        setSelectedSemester={setSelectedSemester}
-        onResetChoices={clearLocalStorageColumns}
-        isMobileView={true}
-      />
+      <div className="max-w-screen-xl mx-auto px-6 py-8 space-y-8">
+        <PlannerControls
+            programs={programs}
+            selectedProgramCode={selectedProgramCode}
+            setSelectedProgramCode={setSelectedProgramCode}
+            selectedYear={selectedYear}
+            setSelectedYear={setSelectedYear}
+            selectedSemester={selectedSemester}
+            setSelectedSemester={setSelectedSemester}
+            onResetChoices={clearLocalStorageColumns}
+            isMobileView={true}
+        />
 
-      {selectedProgramCode && selectedYear ? (
-        <>
-          <div className="hidden sm:flex flex-col sm:flex-row gap-4">
-            <CourseColumn
-              label="Year-Long"
-              type="year"
-              selectedYear={selectedYear}
-              selectedProgramCode={selectedProgramCode}
-              programs={programs}
-              columns={columns}
-              onAddCourse={handleOpenDrawer}
-              onRemoveCourse={removeCourseFromColumn}
-            />
-            <CourseColumn
-              label="Semester 1"
-              type="sem1"
-              selectedYear={selectedYear}
-              selectedProgramCode={selectedProgramCode}
-              programs={programs}
-              columns={columns}
-              onAddCourse={handleOpenDrawer}
-              onRemoveCourse={removeCourseFromColumn}
-            />
-            <CourseColumn
-              label="Semester 2"
-              type="sem2"
-              selectedYear={selectedYear}
-              selectedProgramCode={selectedProgramCode}
-              programs={programs}
-              columns={columns}
-              onAddCourse={handleOpenDrawer}
-              onRemoveCourse={removeCourseFromColumn}
-            />
-          </div>
-          <div className="flex flex-col sm:hidden gap-4">
-            {renderColumnsMobile()}
-          </div>
+        {selectedProgramCode && selectedYear ? (
+            <>
+              <div className="hidden sm:flex flex-col sm:flex-row gap-4">
+                <CourseColumn
+                    label="Year-Long"
+                    type="year"
+                    selectedYear={selectedYear}
+                    selectedProgramCode={selectedProgramCode}
+                    programs={programs}
+                    columns={columns}
+                    onAddCourse={handleOpenDrawer}
+                    onRemoveCourse={removeCourseFromColumn}
+                />
+                <CourseColumn
+                    label="Semester 1"
+                    type="sem1"
+                    selectedYear={selectedYear}
+                    selectedProgramCode={selectedProgramCode}
+                    programs={programs}
+                    columns={columns}
+                    onAddCourse={handleOpenDrawer}
+                    onRemoveCourse={removeCourseFromColumn}
+                />
+                <CourseColumn
+                    label="Semester 2"
+                    type="sem2"
+                    selectedYear={selectedYear}
+                    selectedProgramCode={selectedProgramCode}
+                    programs={programs}
+                    columns={columns}
+                    onAddCourse={handleOpenDrawer}
+                    onRemoveCourse={removeCourseFromColumn}
+                />
+              </div>
+              <div className="flex flex-col sm:hidden gap-4">
+                {renderColumnsMobile()}
+              </div>
 
-          <div className="hidden md:block">
-            {selectedProgramCode && allYearsSummary && (
-              <SummaryTable
-                allSummary={allYearsSummary}
-                programs={programs}
-                selectedProgramCode={selectedProgramCode}
-              />
-            )}
-          </div>
+              <div className="hidden md:block">
+                {selectedProgramCode && allYearsSummary && (
+                    <SummaryTable
+                        allSummary={allYearsSummary}
+                        programs={programs}
+                        selectedProgramCode={selectedProgramCode}
+                    />
+                )}
+              </div>
 
-          {openDrawer && (
-            <CourseDrawer
-              open={openDrawer !== null}
-              onOpenChange={() => setOpenDrawer(null)}
-              label={getDrawerLabel(openDrawer)}
-              type={openDrawer}
-              selectedYear={selectedYear}
-              columns={columns}
-              filteredCourses={getFilteredCourses(openDrawer)}
-              onSelectCourse={handleSelectCourse}
-            />
-          )}
-        </>
-      ) : null}
+              {openDrawer && (
+                  <CourseDrawer
+                      open={openDrawer !== null}
+                      onOpenChange={() => setOpenDrawer(null)}
+                      label={getDrawerLabel(openDrawer)}
+                      type={openDrawer}
+                      selectedYear={selectedYear}
+                      columns={columns}
+                      filteredCourses={getFilteredCourses(openDrawer)}
+                      onSelectCourse={handleSelectCourse}
+                  />
+              )}
+            </>
+        ) : null}
 
-      <PlannerDialogs
-        showDuplicateDialog={showDuplicateDialog}
-        setShowDuplicateDialog={setShowDuplicateDialog}
-        prereqDialogOpen={prereqDialogOpen}
-        setPrereqDialogOpen={setPrereqDialogOpen}
-        pendingCourse={pendingCourse}
-        missingPrereqs={missingPrereqs}
-        onAddCourseOnly={handleAddCourseOnly}
-        onAddWithPrereqs={handleAddWithPrereqs}
-      />
-    </div>
+        <PlannerDialogs
+            showDuplicateDialog={showDuplicateDialog}
+            setShowDuplicateDialog={setShowDuplicateDialog}
+            prereqDialogOpen={prereqDialogOpen}
+            setPrereqDialogOpen={setPrereqDialogOpen}
+            pendingCourse={pendingCourse}
+            missingPrereqs={missingPrereqs}
+            onAddCourseOnly={handleAddCourseOnly}
+            onAddWithPrereqs={handleAddWithPrereqs}
+        />
+      </div>
   );
 };
 

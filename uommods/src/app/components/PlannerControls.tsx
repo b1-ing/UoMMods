@@ -2,6 +2,13 @@ import { Button } from "@/components/ui/button";
 import { Program } from "@/lib/programs";
 import { RefreshCwIcon } from "lucide-react";
 import { Semester } from "@/lib/semesters";
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export type Year = 1 | 2 | 3;
 
@@ -23,8 +30,36 @@ export default function PlannerControls({
   setSelectedProgramCode,
   selectedYear,
   setSelectedYear,
+  selectedSemester,
+  setSelectedSemester,
   onResetChoices,
+  isMobileView,
 }: PlannerControlsProps) {
+  const SemesterSelector = () => {
+    if (isMobileView && selectedProgramCode && selectedYear) {
+      // Mobile dropdown
+      return (
+        <div className="flex flex-col gap-1 sm:hidden">
+          <label className="text-sm font-medium">Semester View</label>
+          <Select 
+            value={selectedSemester} 
+            onValueChange={(value) => setSelectedSemester(value as keyof typeof Semester)}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select semester" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="year">Year-Long</SelectItem>
+              <SelectItem value="sem1">Semester 1</SelectItem>
+              <SelectItem value="sem2">Semester 2</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      );
+    }
+    return null;
+  };
+
   return (
     <>
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
@@ -63,12 +98,13 @@ export default function PlannerControls({
         </div>
       </div>
 
+      <SemesterSelector />
+
       {selectedProgramCode && selectedYear && (
         <Button onClick={onResetChoices}>
           <RefreshCwIcon /> Reset Choices
         </Button>
       )}
-
     </>
   );
 }

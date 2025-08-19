@@ -189,7 +189,7 @@ const Planner = ({ programs }: PlannerProps) => {
     }
 
     setPreviousProgramCode(selectedProgramCode);
-  }, [selectedProgramCode, isPreferencesFetched]);
+  }, [selectedProgramCode, isPreferencesFetched, columns, previousProgramCode, programSelections]);
 
   useEffect(() => {
     const storePreferences = async () => {
@@ -214,62 +214,75 @@ const Planner = ({ programs }: PlannerProps) => {
     }
   }, [columns, selectedProgramCode, isPreferencesFetched]);
 
+  // Populate compulsory courses for all years when program changes or courses are loaded
   useEffect(() => {
-    if (!selectedProgramCode || !selectedYear || !courses) return;
+    if (!selectedProgramCode || !courses || !isPreferencesFetched) return;
 
-    // Only populate compulsory courses if nothing has been added yet for that year
-    const yearCols = columns[selectedYear];
-    const hasAny = (["year", "sem1", "sem2"] as ColumnType[]).some(
-      (col) => yearCols[col]?.length > 0
-    );
-
-    const addCompulsoryCourses = () => {
+    const populateCompulsoryCourses = () => {
       const program = programs[selectedProgramCode as keyof typeof programs];
-      if (!program || !selectedYear) return;
+      if (!program) return;
 
-      const newColumns: Record<ColumnType, Course[]> = {
-        year: [...columns[selectedYear]["year"]],
-        sem1: [...columns[selectedYear]["sem1"]],
-        sem2: [...columns[selectedYear]["sem2"]],
+      const toCourse = (code: string): Course | null => {
+        const course = courses[code];
+        return course ? { ...course, mandatory: "Compulsory" } : null;
       };
-
-      const toCourse = (code: string): Course | null => courses[code] ?? null;
 
       const safeMap = (arr: string[]) =>
         arr.map(toCourse).filter((course): course is Course => course !== null);
 
-      switch (selectedYear) {
-        case 1:
-          newColumns.year = safeMap(program.firstyrfy);
-          newColumns.sem1 = safeMap(program.firstyrs1comp);
-          newColumns.sem2 = safeMap(program.firstyrs2comp);
-          break;
-        case 2:
-          newColumns.year = safeMap(program.secondyrfy);
-          newColumns.sem1 = safeMap(program.secondyrs1comp);
-          newColumns.sem2 = safeMap(program.secondyrs2comp);
-          break;
-        case 3:
-          newColumns.year = safeMap(program.thirdyrfy);
-          newColumns.sem1 = safeMap(program.thirdyrs1comp);
-          newColumns.sem2 = safeMap(program.thirdyrs2comp);
-          break;
-        default:
-          return;
-      }
+      const compulsoryColumns = {
+        1: {
+          year: safeMap(program.firstyrfy || []),
+          sem1: safeMap(program.firstyrs1comp || []),
+          sem2: safeMap(program.firstyrs2comp || []),
+        },
+        2: {
+          year: safeMap(program.secondyrfy || []),
+          sem1: safeMap(program.secondyrs1comp || []),
+          sem2: safeMap(program.secondyrs2comp || []),
+        },
+        3: {
+          year: safeMap(program.thirdyrfy || []),
+          sem1: safeMap(program.thirdyrs1comp || []),
+          sem2: safeMap(program.thirdyrs2comp || []),
+        },
+      };
 
+      // Merge with existing user selections, preserving user choices
       setColumns((prev) => {
-        return {
-          ...prev,
-          [selectedYear]: { ...prev[selectedYear], ...newColumns },
-        };
+        const merged = { ...prev };
+        
+        ([1, 2, 3] as Year[]).forEach((year) => {
+          (["year", "sem1", "sem2"] as ColumnType[]).forEach((col) => {
+            const compulsory = compulsoryColumns[year][col];
+            const existing = prev[year]?.[col] || [];
+            
+            // Find existing user-added optional courses (non-compulsory)
+            const optionalCourses = existing.filter(
+              course => course.mandatory === "Optional"
+            );
+            
+            // Combine compulsory + optional, avoiding duplicates
+            const combined = [...compulsory];
+            optionalCourses.forEach(course => {
+              if (!combined.some(c => c.code === course.code)) {
+                combined.push(course);
+              }
+            });
+            
+            merged[year] = {
+              ...merged[year],
+              [col]: combined,
+            };
+          });
+        });
+        
+        return merged;
       });
     };
 
-    if (!hasAny) {
-      addCompulsoryCourses();
-    }
-  }, [selectedProgramCode, selectedYear, courses, columns, programs]);
+    populateCompulsoryCourses();
+  }, [selectedProgramCode, courses, programs, isPreferencesFetched]);
 
   const updateColumns = (
     year: Year,

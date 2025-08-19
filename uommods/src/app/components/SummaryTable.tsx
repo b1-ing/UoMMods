@@ -25,7 +25,7 @@ interface SummaryTableProps {
 function buildCsvRows(allSummary: AllYearsSummary) {
   const rows: string[][] = [];
   // Header
-  rows.push(["Year", "Column", "Course Code", "Title", "Credits"]);
+  rows.push(["Year", "Column", "Course Code", "Title", "Credits", "Type"]);
 
   allSummary.forEach(({ year, columns }) => {
     columns.forEach(({ column, courses }) => {
@@ -40,6 +40,7 @@ function buildCsvRows(allSummary: AllYearsSummary) {
           course.code,
           course.title,
           String(course.credits),
+          course.mandatory || "Optional",
         ]);
       });
       // subtotal row per column
@@ -53,6 +54,7 @@ function buildCsvRows(allSummary: AllYearsSummary) {
         "",
         "",
         String(courses.reduce((sum, c) => sum + (c?.credits ?? 0), 0)),
+        "",
       ]);
     });
   });
@@ -145,7 +147,14 @@ export default function SummaryTable({
                             : "Semester 2"}
                         </td>
                         <td className="border p-2">{course.code}</td>
-                        <td className="border p-2">{course.title}</td>
+                        <td className="border p-2">
+                          {course.title}
+                          {course.mandatory === "Compulsory" && (
+                            <span className="text-xs bg-blue-100 text-blue-800 px-1 py-0.5 rounded ml-2">
+                              Compulsory
+                            </span>
+                          )}
+                        </td>
                         <td className="border p-2">{course.credits}</td>
                       </tr>
                     ))}

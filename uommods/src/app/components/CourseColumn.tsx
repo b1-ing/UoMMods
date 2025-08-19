@@ -66,6 +66,11 @@ export default function CourseColumn({
                 <div className="flex justify-between items-start">
                   <div className="font-semibold">
                     {course.code ?? "not found"} – {course.title}
+                    {course.mandatory === "Compulsory" && (
+                      <span className="text-xs bg-blue-100 text-blue-800 px-1 py-0.5 rounded ml-2 block mt-1">
+                        Compulsory
+                      </span>
+                    )}
                   </div>
                   <div>
                     {course.mandatory === "Optional" ? (

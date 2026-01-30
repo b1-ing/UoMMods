@@ -14,11 +14,11 @@ import {
 
 type Props = {
     data?: {
-        year: string;
-        mean: number;
-        n: number;
+        year?: string;
+        mean?: number | null;
+        n?: number;
     }[];
-    overallMean: number;
+    overallMean?: number | null;
 };
 
 export default function GradeChart({ data, overallMean  }: Props) {
@@ -32,12 +32,13 @@ export default function GradeChart({ data, overallMean  }: Props) {
                 <Bar dataKey="mean" fill="#8884d8">
                     <ErrorBar dataKey="stdDev" width={4} strokeWidth={2} stroke="black" direction="y" />
                 </Bar>
-                <ReferenceLine
+                {overallMean ? (<ReferenceLine
                     y={overallMean}
                     stroke="red"
                     strokeDasharray="5 5"
                     label={{ value: `Overall Mean: ${overallMean?.toFixed(1)}`, position: 'top', fill: 'red' }}
-                />
+                />) : null}
+
             </BarChart>
         </ResponsiveContainer>
     );

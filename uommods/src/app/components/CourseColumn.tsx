@@ -2,22 +2,22 @@ import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Trash } from "lucide-react";
 import Link from "next/link";
-import { Course } from "@/lib/mockcourses";
-import { Program } from "@/lib/programs";
+import { Course } from "@/lib/types";
+import { Program } from "@/lib/types";
 import { PrereqDisplay } from "@/app/components/PrereqDisplay";
 import { Year } from "./PlannerControls";
 
-export type ColumnType = "year" | "sem1" | "sem2";
+
 
 interface CourseColumnProps {
   label: string | null;
-  type: ColumnType;
+  type: string;
   selectedYear: Year;
   selectedProgramCode: string;
   programs: Record<string, Program>;
-  columns: Record<Year, Record<ColumnType, Course[]>>;
-  onAddCourse: (type: ColumnType) => void;
-  onRemoveCourse: (course: Course, type: ColumnType) => void;
+  columns: Record<Year, Record<string, Course[]>>;
+  onAddCourse: (type: string) => void;
+  onRemoveCourse: (course: Course, type: string) => void;
 }
 
 export default function CourseColumn({
@@ -47,7 +47,7 @@ export default function CourseColumn({
     <Card className="w-full sm:w-1/3 p-4 flex flex-col gap-4 m-1">
       <div className="flex justify-between items-center">
         <CardTitle>
-          {label ? `${label} –` : type === "year" ? "Year-Long –" : type === "sem1" ? "Semester 1 –" : "Semester 2 –"} {currentCredits}/{requiredCredits}{" "}
+          {label ? `${label} –` : type === "Full year" ? "Year-Long –" : type === "Semester 1" ? "Semester 1 –" : "Semester 2 –"} {currentCredits}/{requiredCredits}{" "}
           credits
         </CardTitle>
         <Button size="sm" onClick={() => onAddCourse(type)}>
@@ -66,14 +66,14 @@ export default function CourseColumn({
                 <div className="flex justify-between items-start">
                   <div className="font-semibold">
                     {course.code ?? "not found"} – {course.title}
-                    {course.mandatory === "Compulsory" && (
+                    {course.mandatory && (
                       <span className="text-xs bg-blue-100 text-blue-800 px-1 py-0.5 rounded ml-2 block mt-1">
                         Compulsory
                       </span>
                     )}
                   </div>
                   <div>
-                    {course.mandatory === "Optional" ? (
+                    {!course.mandatory ? (
                       <Button
                         variant="ghost"
                         size="icon"

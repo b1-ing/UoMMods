@@ -1,20 +1,12 @@
 import HeaderBar from "@/app/components/HeaderBar";
 import Planner from "../components/Planner";
-import { supabase } from "@/lib/supabase";
-import { unstable_cache } from "next/cache";
-import { Program } from "@/lib/programs";
+import { Program } from "@/lib/types";
+import {programs} from "@/lib/programs";
 
-const getPrograms = unstable_cache(async () => {
-  return await supabase.from("programs").select("*");
-});
 
 
 export default async function CoursePlanner() {
-  const { data, error } = await getPrograms();
-  if (error) {
-    console.error("Error fetching programs:", error);
-    return;
-  }
+  const data = programs;
   const programMap: Record<string, Program> = {};
   data?.forEach((program: Program) => {
     programMap[program.program_id] = program;

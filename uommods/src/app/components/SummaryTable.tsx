@@ -1,15 +1,13 @@
 import React from "react";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Course } from "@/lib/mockcourses";
-import { Program } from "@/lib/programs";
+import { Course, Program } from "@/lib/types";
 import { Year } from "./PlannerControls";
-import { ColumnType } from "./CourseColumn";
 
 type AllYearsSummary = {
   year: Year;
   columns: {
-    column: ColumnType;
+    column: string;
     courses: Course[];
     totalCredits: number;
   }[];
@@ -32,9 +30,9 @@ function buildCsvRows(allSummary: AllYearsSummary) {
       courses.forEach((course) => {
         rows.push([
           String(year),
-          column === "year"
+          column === "Full year"
               ? "Year-long"
-              : column === "sem1"
+              : column === "Semester 1"
                   ? "Semester 1"
                   : "Semester 2",
           course.code,
@@ -45,9 +43,9 @@ function buildCsvRows(allSummary: AllYearsSummary) {
       // subtotal row per column
       rows.push([
         String(year),
-        column === "year"
+        column === "Full year"
             ? "Year-long total"
-            : column === "sem1"
+            : column === "Semester 1"
                 ? "Semester 1 total"
                 : "Semester 2 total",
         "",

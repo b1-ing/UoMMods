@@ -6,20 +6,19 @@ import {
 } from "@/components/ui/drawer";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Course } from "@/lib/mockcourses";
+import { Course } from "@/lib/types";
 import { PrereqDisplay } from "@/app/components/PrereqDisplay";
 import { Year } from "./PlannerControls";
-import { ColumnType } from "./CourseColumn";
 
 interface CourseDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   label: string | null;
-  type: ColumnType;
+  type: string;
   selectedYear: Year;
-  columns: Record<Year, Record<ColumnType, Course[]>>;
+  columns: Record<Year, Record<string, Course[]>>;
   filteredCourses: Course[];
-  onSelectCourse: (course: Course, type: ColumnType) => void;
+  onSelectCourse: (course: Course, type: string) => void;
 }
 
 export default function CourseDrawer({
@@ -43,7 +42,7 @@ export default function CourseDrawer({
             <ScrollArea className="h-full">
               <div className="space-y-2 pb-4">
                 {filteredCourses
-                    .filter(course => course.mandatory !== "Optional")
+                    .filter(course => !course.mandatory)
                     .map((course) => (
                         <Card
                             key={course.code}

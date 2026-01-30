@@ -1,7 +1,6 @@
 import { Button } from "@/components/ui/button";
-import { Program } from "@/lib/programs";
+import { Program } from "@/lib/types";
 import { RefreshCwIcon } from "lucide-react";
-import { Semester } from "@/lib/semesters";
 import { 
   Select,
   SelectContent,
@@ -18,8 +17,8 @@ interface PlannerControlsProps {
   setSelectedProgramCode: (code: string) => void;
   selectedYear: Year;
   setSelectedYear: (year: Year) => void;
-  selectedSemester: keyof typeof Semester;
-  setSelectedSemester: (semester: keyof typeof Semester) => void;
+  selectedSemester: string;
+  setSelectedSemester: (semester: string) => void;
   onResetChoices: () => void;
   isMobileView?: boolean;
 }
@@ -43,15 +42,15 @@ export default function PlannerControls({
           <label className="text-sm font-medium">Semester View</label>
           <Select 
             value={selectedSemester} 
-            onValueChange={(value) => setSelectedSemester(value as keyof typeof Semester)}
+            onValueChange={(value) => setSelectedSemester(value)}
           >
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Select semester" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="year">Year-Long</SelectItem>
-              <SelectItem value="sem1">Semester 1</SelectItem>
-              <SelectItem value="sem2">Semester 2</SelectItem>
+              <SelectItem value="Full year">Year-Long</SelectItem>
+              <SelectItem value="Semester 1">Semester 1</SelectItem>
+              <SelectItem value="Semester 2">Semester 2</SelectItem>
             </SelectContent>
           </Select>
         </div>

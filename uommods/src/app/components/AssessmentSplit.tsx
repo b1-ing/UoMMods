@@ -1,85 +1,26 @@
 "use client"
 
-import { useEffect, useState } from "react";
-import { createClient } from "@supabase/supabase-js";
-
-// Define the type
-type AssessmentRow = {
-    percentage: number;
-    assessment_types: {
-        name: string;
-    };
-};
-
-// Setup Supabase client
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+import { courses } from "@/lib/courses";
 
 export default function AssessmentSplit({ courseCode }: { courseCode: string }) {
-    const [assessments, setAssessments] = useState<AssessmentRow[]>([]);
+    // 1. Find the course locally
+    const currentCourse = courses.find(c => c.code?.toUpperCase() === courseCode?.toUpperCase());
 
-    useEffect(() => {
-        const fetchData = async () => {
-            const { data, error } = await supabase
-                .from("course_assessments")
-                .select(`
-          percentage,
-          assessment_types (
-            name
-          )
-        `)
-                .eq("course_code", courseCode);
+    // 2. If no course or no assessment data, return null or a message
+    if (!currentCourse || !currentCourse.assessment) {
+        return <p className="text-muted-foreground italic">No assessment data available.</p>;
+    }
 
-            if (error) {
-                console.error("Supabase error:", error);
-                return;
-            }
-
-            if (!data || !Array.isArray(data)) {
-                console.error("Data is not an array:", data);
-                return;
-            }
-
-            // Normalize into AssessmentRow[]
-            type RawAssessment = {
-                percentage: number;
-                assessment_types: { name: string } | { name: string }[];
-            };
-
-            type AssessmentRow = {
-                percentage: number;
-                assessment_types: { name: string };
-            };
-
-            const normalized: AssessmentRow[] = (data as RawAssessment[]).map((item) => {
-                const at = Array.isArray(item.assessment_types)
-                    ? item.assessment_types[0]?.name ?? "Unknown"
-                    : item.assessment_types?.name ?? "Unknown";
-
-                return {
-                    percentage: item.percentage,
-                    assessment_types: {
-                        name: at,
-                    },
-                };
-            });
-
-
-
-            setAssessments(normalized);
-        };
-
-        fetchData();
-    }, [courseCode]);
+    // 3. Convert the assessment object { "Exam": 80 } into an array for mapping
+    const assessmentEntries = Object.entries(currentCourse.assessment);
 
     return (
         <div>
-            <h2 className="text-xl font-semibold">Assessment Breakdown</h2>
             <ul className="mt-2 space-y-2">
-                {assessments.map((item, idx) => (
-                    <li key={idx} className="border p-2 rounded shadow">
-                        <strong>{item.assessment_types.name}</strong>: {item.percentage * 100}%
+                {assessmentEntries.map(([name, percentage], idx) => (
+                    <li key={`${name}-${idx}`} className="border p-2 rounded shadow flex justify-between">
+                        <span className="font-semibold">{name}</span>
+                        <span>{percentage}%</span>
                     </li>
                 ))}
             </ul>

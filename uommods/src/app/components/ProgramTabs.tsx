@@ -1,16 +1,16 @@
 // app/components/ProgramTabs.tsx
 "use client";
-import { supabase } from '@/lib/supabase'
 import { useState } from "react";
 import ProgramDependencyGraph from "@/app/components/ProgramDependencyGraph";
+import {programs} from "@/lib/programs";
 
 
 
 
-
-const {data: programs} = await supabase
-    .from('programs')
-    .select('program_id')
+//
+// const {data: programs} = await supabase
+//     .from('programs')
+//     .select('program_id')
 
 export default function ProgramTabs({
                                         initialProgramId,

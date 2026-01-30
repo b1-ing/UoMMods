@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -12,44 +12,59 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import HeaderBar from "@/app/components/HeaderBar";
-import { supabase } from "@/lib/supabase";
-import { Course } from "@/lib/mockcourses";
 import Fuse from "fuse.js";
+import {courses} from "@/lib/courses";
 
 export default function CourseListPage() {
-  const [courses, setCourses] = useState<Course[]>([]);
+  // const [courses, setCourses] = useState<Course[]>([]);
   const [search, setSearch] = useState("");
   const [yearFilter, setYearFilter] = useState("");
 
-  useEffect(() => {
-    const fetchCourses = async () => {
-      const { data } = await supabase.from("courses").select("*");
-      if (data) setCourses(data);
-    };
+  // useEffect(() => {
+  //   const fetchCourses = async () => {
+  //     const { data } = await supabase.from("courses").select("*");
+  //     if (data) setCourses(data);
+  //   };
+  //
+  //   fetchCourses();
+  // }, []);
 
-    fetchCourses();
-  }, []);
+
 
   const fuse = new Fuse(courses, {
     keys: ["title", "code"],
     threshold: 0.5,
   });
-  const result =
+  const searchResult =
     search.trim() === ""
       ? courses.map((course) => ({ item: course }))
       : fuse.search(search);
 
-  let filteredCourses = null;
-  if (search.trim() === "") {
-    filteredCourses = result.sort((a, b) =>
-      a.item.code.localeCompare(b.item.code)
-    );
-  } else {
-    filteredCourses = result.filter((course) => {
-      const courseYear = parseInt(course.item.code.slice(4, 5)); // e.g., COMP11120 => 1st year
-      return yearFilter === "" || courseYear.toString() === yearFilter;
-    });
-  }
+  // let filteredCourses = null;
+  // if (search.trim() === "") {
+  //   filteredCourses = result.sort((a, b) =>
+  //     a.item.code.localeCompare(b.item.code)
+  //   );
+  // } else {
+  //   filteredCourses = result.filter((course) => {
+  //     const courseYear = parseInt(course.item.code.slice(4, 5)); // e.g., COMP11120 => 1st year
+  //     return yearFilter === "" || courseYear.toString() === yearFilter;
+  //   });
+  // }
+
+  // const filteredCourses = searchResult;
+
+  const filteredCourses = searchResult.filter((result) => {
+    const course = result.item;
+
+    // Check Year Filter: Match if filter is empty, "all", or matches the level
+    const matchesYear =
+        yearFilter === "" ||
+        yearFilter === "all" ||
+        course.level.toString() === yearFilter;
+
+    return matchesYear;
+  }).sort((a, b) => a.item.code.localeCompare(b.item.code));
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-slate-100 text-gray-800">
@@ -107,9 +122,8 @@ export default function CourseListPage() {
                   </p>
                 </CardHeader>
                 <CardContent className="text-sm text-muted-foreground">
-                  <p>{course.item.faculty}</p>
                   <p>{course.item.credits} Units</p>
-                  <p>Offered in: {course.item.semesters}</p>
+                  <p>Offered in: {course.item.semester}</p>
                 </CardContent>
               </Card>
             </Link>

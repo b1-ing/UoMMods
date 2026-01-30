@@ -6,7 +6,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Course } from "@/lib/mockcourses";
+import { Course } from "@/lib/types";
 
 interface PlannerDialogsProps {
   showDuplicateDialog: boolean;

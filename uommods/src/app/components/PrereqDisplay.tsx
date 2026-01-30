@@ -6,12 +6,10 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Course } from "@/lib/mockcourses";
+import { Course } from "@/lib/types";
 
 type ColumnType = "year" | "sem1" | "sem2";
-function splitCourseCodes(codes: string): string[] {
-  return codes.split(",");
-}
+
 function courseExistsInColumns(
   code: string,
   columns: Record<ColumnType, Course[]>
@@ -26,12 +24,12 @@ export const PrereqDisplay = ({
   corequisites,
   columns,
 }: {
-  prerequisites?: string;
-  corequisites?: string;
+  prerequisites?: string[];
+  corequisites?: string[];
   columns: Record<string, Course[]>;
 }) => {
-  const prereqList = prerequisites ? splitCourseCodes(prerequisites) : [];
-  const coreqList = corequisites ? splitCourseCodes(corequisites) : [];
+  const prereqList =  Array.isArray(prerequisites) ? prerequisites : [];
+  const coreqList = Array.isArray(corequisites) ? corequisites : [];
 
   return (
     <div className="space-y-4">

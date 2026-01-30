@@ -1,11 +1,9 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Program } from "@/lib/programs";
-import { Course } from "@/lib/mockcourses";
-import { Semester } from "@/lib/semesters";
+import { Program, Course } from "@/lib/types";
 import PlannerControls, { Year } from "@/app/components/PlannerControls";
-import CourseColumn, { ColumnType } from "@/app/components/CourseColumn";
+import CourseColumn from "@/app/components/CourseColumn";
 import CourseDrawer from "@/app/components/CourseDrawer";
 import SummaryTable from "@/app/components/SummaryTable";
 import PlannerDialogs from "@/app/components/PlannerDialogs";
@@ -30,19 +28,19 @@ const useIsMobile = () => {
 
 const defaultColumns = {
   1: {
-    year: [],
-    sem1: [],
-    sem2: [],
+    "Full year": [],
+    "Semester 1": [],
+    "Semester 2": [],
   },
   2: {
-    year: [],
-    sem1: [],
-    sem2: [],
+    "Full year": [],
+    "Semester 1": [],
+    "Semester 2": [],
   },
   3: {
-    year: [],
-    sem1: [],
-    sem2: [],
+    "Full year": [],
+    "Semester 1": [],
+    "Semester 2": [],
   },
 };
 
@@ -53,27 +51,22 @@ type PlannerProps = {
 const Planner = ({ programs }: PlannerProps) => {
   const isMobile = useIsMobile();
   const [courses, setCourses] = useState<Record<string, Course>>({});
-  const [selectedSemester, setSelectedSemester] =
-      useState<keyof typeof Semester>("sem1");
-  const [selectedYear, setSelectedYear] = useState<Year>(Number("") as Year);
+  const [selectedSemester, setSelectedSemester] = useState<string>("Full year");
+  const [selectedYear, setSelectedYear] = useState<Year>(1 as Year);
   const [selectedProgramCode, setSelectedProgramCode] = useState<string>("");
   const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
   const [pendingCourse, setPendingCourse] = useState<Course | null>(null);
   const [missingPrereqs, setMissingPrereqs] = useState<Course[]>([]);
   const [prereqDialogOpen, setPrereqDialogOpen] = useState(false);
-  const [pendingColumn, setPendingColumn] = useState<ColumnType>("year");
-  const [isPreferencesFetched, setIsPreferencesFetched] =
-      useState<boolean>(false);
-  const [openDrawer, setOpenDrawer] = useState<ColumnType | null>(null);
-  const [columns, setColumns] =
-      useState<Record<Year, Record<ColumnType, Course[]>>>(defaultColumns);
-  const [programSelections, setProgramSelections] = useState<
-      Record<string, Record<Year, Record<ColumnType, Course[]>>>
-  >({});
+  const [pendingColumn, setPendingColumn] = useState<string>("Full year");
+  const [isPreferencesFetched, setIsPreferencesFetched] = useState<boolean>(false);
+  const [openDrawer, setOpenDrawer] = useState<string | null>(null);
+  const [columns, setColumns] = useState<Record<Year, Record<string, Course[]>>>(defaultColumns);
+  const [programSelections, setProgramSelections] = useState<Record<string, Record<Year, Record<string, Course[]>>>>({});
   const [previousProgramCode, setPreviousProgramCode] = useState<string>("");
 
   const resetColumns = () => {
-    setColumns(defaultColumns);
+    setColumns(JSON.parse(JSON.stringify(defaultColumns)));
   };
 
   const clearLocalStorageColumns = () => {
@@ -84,39 +77,52 @@ const Planner = ({ programs }: PlannerProps) => {
   };
 
   const fetchPreferences = async () => {
-    setSelectedYear(
-        (prev) => Number(localStorage.getItem("selectedYear") ?? prev) as Year
-    );
-    setSelectedProgramCode(
-        (prev) => localStorage.getItem("selectedProgramCode") ?? prev
-    );
-    setColumns(
-        (prev) => JSON.parse(localStorage.getItem("columns") ?? "null") ?? prev
-    );
-    setProgramSelections(
-        (prev) => JSON.parse(localStorage.getItem("programSelections") ?? "null") ?? prev
-    );
+    const savedYear = localStorage.getItem("selectedYear");
+    const savedProgramCode = localStorage.getItem("selectedProgramCode");
+    const savedColumns = localStorage.getItem("columns");
+    const savedProgramSelections = localStorage.getItem("programSelections");
+
+    if (savedYear) {
+      setSelectedYear(Number(savedYear) as Year);
+    }
+    if (savedProgramCode) {
+      setSelectedProgramCode(savedProgramCode);
+    }
+    if (savedColumns) {
+      try {
+        setColumns(JSON.parse(savedColumns));
+      } catch (e) {
+        console.error("Error parsing saved columns:", e);
+      }
+    }
+    if (savedProgramSelections) {
+      try {
+        setProgramSelections(JSON.parse(savedProgramSelections));
+      } catch (e) {
+        console.error("Error parsing saved program selections:", e);
+      }
+    }
     setIsPreferencesFetched(true);
   };
 
   const handleAddWithPrereqs = () => {
-    if (!pendingCourse) return;
-    if (pendingCourse && pendingColumn) {
-      updateColumns(selectedYear, pendingColumn, pendingCourse);
-    }
+    if (!pendingCourse || !pendingColumn) return;
+
+    updateColumns(selectedYear, pendingColumn, pendingCourse);
+
     missingPrereqs.forEach((prereqCourse) => {
       if (!prereqCourse) return;
 
       // Decide which column based on its semester
-      const semesters = prereqCourse.semesters ?? [];
+      const semesters = prereqCourse.semester ?? [];
 
-      let targetColumn: ColumnType | null = null;
-      if (semesters.includes("Full year")) targetColumn = "year";
-      else if (semesters.includes("Semester 1")) targetColumn = "sem1";
-      else if (semesters.includes("Semester 2")) targetColumn = "sem2";
+      let targetColumn: string | null = null;
+      if (semesters.includes("Full year")) targetColumn = "Full year";
+      else if (semesters.includes("Semester 1")) targetColumn = "Semester 1";
+      else if (semesters.includes("Semester 2")) targetColumn = "Semester 2";
 
       if (targetColumn) {
-        addCourseToColumn(selectedYear, prereqCourse, targetColumn);
+        updateColumns(selectedYear, targetColumn, prereqCourse);
       }
     });
 
@@ -127,10 +133,9 @@ const Planner = ({ programs }: PlannerProps) => {
   };
 
   const handleAddCourseOnly = () => {
-    if (!pendingCourse) return;
-    if (pendingCourse && pendingColumn) {
-      updateColumns(selectedYear, pendingColumn, pendingCourse);
-    }
+    if (!pendingCourse || !pendingColumn) return;
+
+    updateColumns(selectedYear, pendingColumn, pendingCourse);
 
     setPendingCourse(null);
     setMissingPrereqs([]);
@@ -145,46 +150,47 @@ const Planner = ({ programs }: PlannerProps) => {
 
   useEffect(() => {
     const fetchCourses = async () => {
-      const response = await fetch(
-          `/api/courses?programCode=${selectedProgramCode}`
-      );
-      if (!response.ok) {
-        console.log("Error fetching courses: ", response.text);
-      }
-      const data: {
-        course_code: string;
-        courses: Course[];
-      }[] = await response.json();
-      const courseMap: Record<string, Course> = {};
-      if (data) {
-        data.forEach((record) => {
-          const courses = record.courses;
-          if (Array.isArray(courses)) {
-            courses.forEach((course) => {
-              if (course?.code) {
-                courseMap[course.code] = {
-                  ...course,
-                  code: course.code,
-                };
-              }
-            });
-          } else if (
-              courses &&
-              typeof courses === "object" &&
-              "code" in courses
-          ) {
-            const singleCourse = courses as Course;
-            courseMap[singleCourse.code] = {
-              ...singleCourse,
-              code: singleCourse.code,
-            };
-          }
-        });
-      }
+      try {
+        const response = await fetch(`/api/courses?programCode=${selectedProgramCode}`);
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error("Error fetching courses:", errorText);
+          return;
+        }
+        const data: { course_code: string; courses: Course[] }[] = await response.json();
+        const courseMap: Record<string, Course> = {};
 
-      setCourses(courseMap);
+        if (data) {
+          data.forEach((record) => {
+            const courses = record.courses;
+            if (Array.isArray(courses)) {
+              courses.forEach((course) => {
+                if (course?.code) {
+                  courseMap[course.code] = {
+                    ...course,
+                    code: course.code,
+                  };
+                }
+              });
+            } else if (courses && typeof courses === "object" && "code" in courses) {
+              const singleCourse = courses as Course;
+              courseMap[singleCourse.code] = {
+                ...singleCourse,
+                code: singleCourse.code,
+              };
+            }
+          });
+        }
+
+        setCourses(courseMap);
+      } catch (error) {
+        console.error("Error fetching courses:", error);
+      }
     };
-    if (!!selectedProgramCode) fetchCourses();
+
+    if (selectedProgramCode) {
+      fetchCourses();
+    }
   }, [selectedProgramCode]);
 
   // Handle program switching with state management
@@ -195,14 +201,14 @@ const Planner = ({ programs }: PlannerProps) => {
     if (previousProgramCode && previousProgramCode !== selectedProgramCode) {
       setProgramSelections(prev => ({
         ...prev,
-        [previousProgramCode]: { ...columns }
+        [previousProgramCode]: JSON.parse(JSON.stringify(columns))
       }));
     }
 
     // Load selections for the new program
     const savedSelections = programSelections[selectedProgramCode];
     if (savedSelections) {
-      setColumns(savedSelections);
+      setColumns(JSON.parse(JSON.stringify(savedSelections)));
     } else {
       resetColumns();
     }
@@ -213,14 +219,14 @@ const Planner = ({ programs }: PlannerProps) => {
   useEffect(() => {
     const storePreferences = async () => {
       localStorage.setItem("selectedYear", selectedYear.toString());
-      localStorage.setItem(
-          "selectedProgramCode",
-          selectedProgramCode.toString()
-      );
+      localStorage.setItem("selectedProgramCode", selectedProgramCode.toString());
       localStorage.setItem("columns", JSON.stringify(columns));
       localStorage.setItem("programSelections", JSON.stringify(programSelections));
     };
-    if (isPreferencesFetched) storePreferences();
+
+    if (isPreferencesFetched) {
+      storePreferences();
+    }
   }, [selectedYear, selectedProgramCode, columns, programSelections, isPreferencesFetched]);
 
   // Update programSelections whenever columns change
@@ -228,95 +234,93 @@ const Planner = ({ programs }: PlannerProps) => {
     if (selectedProgramCode && isPreferencesFetched) {
       setProgramSelections(prev => ({
         ...prev,
-        [selectedProgramCode]: { ...columns }
+        [selectedProgramCode]: JSON.parse(JSON.stringify(columns))
       }));
     }
   }, [columns, selectedProgramCode, isPreferencesFetched]);
 
   useEffect(() => {
-    if (!selectedProgramCode || !selectedYear || !courses) return;
+    if (!selectedProgramCode || !selectedYear || !courses || Object.keys(courses).length === 0) return;
 
     // Only populate compulsory courses if nothing has been added yet for that year
     const yearCols = columns[selectedYear];
-    const hasAny = (["year", "sem1", "sem2"] as ColumnType[]).some(
+    const hasAny = (["Full year", "Semester 1", "Semester 2"] as string[]).some(
         (col) => yearCols[col]?.length > 0
     );
+    const program = programs[selectedProgramCode];
+
+    const toCourse = (code: string): Course | null => courses[code] ?? null;
+
+
+
+    const safeMap = (arr: string[] | undefined) =>
+        (arr || []).map(toCourse).filter((course): course is Course => course !== null);
+
+    console.log((program.firstyrs2comp));
+
+    if (hasAny) return;
 
     const addCompulsoryCourses = () => {
-      const program = programs[selectedProgramCode as keyof typeof programs];
+
       if (!program || !selectedYear) return;
 
-      const newColumns: Record<ColumnType, Course[]> = {
-        year: [...columns[selectedYear]["year"]],
-        sem1: [...columns[selectedYear]["sem1"]],
-        sem2: [...columns[selectedYear]["sem2"]],
+      const newColumns: Record<string, Course[]> = {
+        "Full year": [],
+        "Semester 1": [],
+        "Semester 2": [],
       };
 
-      const toCourse = (code: string): Course | null => courses[code] ?? null;
 
-      const safeMap = (arr: string[]) =>
-          arr.map(toCourse).filter((course): course is Course => course !== null);
 
       switch (selectedYear) {
         case 1:
-          newColumns.year = safeMap(program.firstyrfy);
-          newColumns.sem1 = safeMap(program.firstyrs1comp);
-          newColumns.sem2 = safeMap(program.firstyrs2comp);
+          newColumns["Full year"] = safeMap(program.firstyrfy);
+          newColumns["Semester 1"] = safeMap(program.firstyrs1comp);
+          newColumns["Semester 2"] = safeMap(program.firstyrs2comp);
           break;
         case 2:
-          newColumns.year = safeMap(program.secondyrfy);
-          newColumns.sem1 = safeMap(program.secondyrs1comp);
-          newColumns.sem2 = safeMap(program.secondyrs2comp);
+          newColumns["Full year"] = safeMap(program.secondyrfy);
+          newColumns["Semester 1"] = safeMap(program.secondyrs1comp);
+          newColumns["Semester 2"] = safeMap(program.secondyrs2comp);
           break;
         case 3:
-          newColumns.year = safeMap(program.thirdyrfy);
-          newColumns.sem1 = safeMap(program.thirdyrs1comp);
-          newColumns.sem2 = safeMap(program.thirdyrs2comp);
+          newColumns["Full year"] = safeMap(program.thirdyrfy);
+          newColumns["Semester 1"] = safeMap(program.thirdyrs1comp);
+          newColumns["Semester 2"] = safeMap(program.thirdyrs2comp);
           break;
         default:
           return;
       }
 
-      setColumns((prev) => {
-        return {
-          ...prev,
-          [selectedYear]: { ...prev[selectedYear], ...newColumns },
-        };
-      });
+      setColumns((prev) => ({
+        ...prev,
+        [selectedYear]: newColumns,
+      }));
     };
 
-    if (!hasAny) {
-      addCompulsoryCourses();
-    }
-  }, [selectedProgramCode, selectedYear, courses, columns, programs]);
 
-  const updateColumns = (
-      year: Year,
-      column: ColumnType,
-      course: Course | null
-  ) => {
-    setColumns((prev) => {
-      return {
-        ...prev,
-        [year]: { ...prev[year], [column]: [...prev[year][column], course] },
-      };
-    });
+    addCompulsoryCourses();
+    console.log(columns)
+  }, [selectedProgramCode, selectedYear, courses, programs]);
+
+  const updateColumns = (year: Year, column: string, course: Course) => {
+    setColumns((prev) => ({
+      ...prev,
+      [year]: {
+        ...prev[year],
+        [column]: [...prev[year][column], course]
+      },
+    }));
   };
 
-  const addCourseToColumn = (
-      year: Year,
-      course: Course,
-      column: ColumnType
-  ) => {
+  const addCourseToColumn = (year: Year, course: Course, column: string) => {
     if (courseExistsInColumns(year, course.code, columns)) {
       setOpenDrawer(null);
       setShowDuplicateDialog(true);
       return;
     }
 
-    const prereqCodes = course.corequisites_list
-        ? splitCourseCodes(course.corequisites_list)
-        : [];
+    const prereqCodes = course.corequisites_list || [];
 
     const missing = prereqCodes
         .filter((code) => !courseExistsInColumns(year, code, columns))
@@ -336,25 +340,16 @@ const Planner = ({ programs }: PlannerProps) => {
     setOpenDrawer(null);
   };
 
-  const removeCourseFromColumn = (course: Course, column: ColumnType) => {
-    setColumns((prev) => {
-      const updated = {
-        ...prev,
-        [selectedYear]: {
-          ...prev[selectedYear],
-          [column]: prev[selectedYear][column].filter(
-              (c) => c.code !== course.code
-          ),
-        },
-      };
-      return updated;
-    });
+  const removeCourseFromColumn = (course: Course, column: string) => {
+    setColumns((prev) => ({
+      ...prev,
+      [selectedYear]: {
+        ...prev[selectedYear],
+        [column]: prev[selectedYear][column].filter((c) => c.code !== course.code),
+      },
+    }));
     setOpenDrawer(null);
   };
-
-  function splitCourseCodes(codes: string): string[] {
-    return codes.split(",");
-  }
 
   const getFilteredCourses = (type: string) => {
     if (!selectedProgramCode || !selectedYear) return [];
@@ -363,44 +358,60 @@ const Planner = ({ programs }: PlannerProps) => {
     if (!program) return [];
 
     // Map year + semester to the relevant program property
-    const optionalLists: Record<Year, Record<ColumnType, string[]>> = {
+    const optionalLists: Record<Year, Record<string, string[]>> = {
       1: {
-        year: [],
-        sem1: program.firstyrs1op || [],
-        sem2: program.firstyrs2op || [],
+        "Full year": [],
+        "Semester 1": program.firstyrs1op || [],
+        "Semester 2": program.firstyrs2op || [],
       },
       2: {
-        year: [],
-        sem1: program.secondyrs1op || [],
-        sem2: program.secondyrs2op || [],
+        "Full year": [],
+        "Semester 1": program.secondyrs1op || [],
+        "Semester 2": program.secondyrs2op || [],
       },
       3: {
-        year: [],
-        sem1: program.thirdyrs1op || [],
-        sem2: program.thirdyrs2op || [],
+        "Full year": [],
+        "Semester 1": program.thirdyrs1op || [],
+        "Semester 2": program.thirdyrs2op || [],
       },
     };
 
-    const allowedCodes = optionalLists[selectedYear]?.[type as ColumnType] || [];
+    const allowedCodes = optionalLists[selectedYear]?.[type] || [];
 
-    return Object.values(courses).filter(
-        (course) =>
-            course.level === selectedYear &&
-            allowedCodes.includes(course.code) &&
-            (
-                (type === "sem1" && course.semesters?.includes("Semester 1")) ||
-                (type === "sem2" && course.semesters?.includes("Semester 2")) ||
-                (type === "year" && course.semesters?.includes("Full year"))
-            )
-    );
+    // Debug logging
+    console.log('getFilteredCourses called:', {
+      type,
+      selectedYear,
+      allowedCodesCount: allowedCodes.length,
+      allowedCodes: allowedCodes.slice(0, 5), // First 5 codes
+    });
+
+    // If no allowed codes for this semester, return empty
+    if (allowedCodes.length === 0) return [];
+
+    const filtered = Object.values(courses).filter((course) => {
+      // Must be in the allowed codes list
+      if (!allowedCodes.includes(course.code)) return false;
+
+      // Must be the correct year level
+      if (course.level !== selectedYear) return false;
+
+      // Must be offered in the correct semester
+
+
+    });
+
+    console.log('Filtered courses:', filtered.length);
+
+    return filtered;
   };
 
   function courseExistsInColumns(
       year: Year,
       code: string,
-      columns: Record<Year, Record<ColumnType, Course[]>>
+      columns: Record<Year, Record<string, Course[]>>
   ): boolean {
-    return Object.values(columns[year]!).some((column) =>
+    return Object.values(columns[year]).some((column) =>
         column.some((course) => course?.code === code)
     );
   }
@@ -413,22 +424,20 @@ const Planner = ({ programs }: PlannerProps) => {
     type YearSummary = {
       year: Year;
       columns: {
-        column: ColumnType;
+        column: string;
         courses: Course[];
         totalCredits: number;
       }[];
     };
 
     const summaries: YearSummary[] = ([1, 2, 3] as Year[]).map((yr) => {
-      const yearCols =
-          columns[yr] ||
-          ({
-            year: [],
-            sem1: [],
-            sem2: [],
-          } as Record<ColumnType, Course[]>);
+      const yearCols = columns[yr] || {
+        "Full year": [],
+        "Semester 1": [],
+        "Semester 2": [],
+      };
 
-      const columnSummaries = (["year", "sem1", "sem2"] as ColumnType[]).map(
+      const columnSummaries = (["Full year", "Semester 1", "Semester 2"] as string[]).map(
           (col) => {
             const coursesInCol = yearCols[col] ?? [];
             const totalCredits = coursesInCol.reduce(
@@ -452,21 +461,21 @@ const Planner = ({ programs }: PlannerProps) => {
     return summaries;
   }, [columns, selectedProgramCode]);
 
-  const handleOpenDrawer = (type: ColumnType) => {
+  const handleOpenDrawer = (type: string) => {
     setOpenDrawer(type);
   };
 
-  const handleSelectCourse = (course: Course, type: ColumnType) => {
+  const handleSelectCourse = (course: Course, type: string) => {
     addCourseToColumn(course.level as Year, course, type);
   };
 
-  const getDrawerLabel = (type: ColumnType) => {
+  const getDrawerLabel = (type: string) => {
     switch (type) {
-      case "year":
-        return "Year-Long";
-      case "sem1":
+      case "Full year":
+        return "Full year";
+      case "Semester 1":
         return "Semester 1";
-      case "sem2":
+      case "Semester 2":
         return "Semester 2";
       default:
         return null;
@@ -477,7 +486,7 @@ const Planner = ({ programs }: PlannerProps) => {
     return (
         <CourseColumn
             label={null}
-            type={selectedSemester as ColumnType}
+            type={selectedSemester}
             selectedYear={selectedYear}
             selectedProgramCode={selectedProgramCode}
             programs={programs}
@@ -507,7 +516,7 @@ const Planner = ({ programs }: PlannerProps) => {
               <div className="hidden sm:flex flex-col sm:flex-row gap-4">
                 <CourseColumn
                     label="Year-Long"
-                    type="year"
+                    type="Full year"
                     selectedYear={selectedYear}
                     selectedProgramCode={selectedProgramCode}
                     programs={programs}
@@ -517,7 +526,7 @@ const Planner = ({ programs }: PlannerProps) => {
                 />
                 <CourseColumn
                     label="Semester 1"
-                    type="sem1"
+                    type="Semester 1"
                     selectedYear={selectedYear}
                     selectedProgramCode={selectedProgramCode}
                     programs={programs}
@@ -527,7 +536,7 @@ const Planner = ({ programs }: PlannerProps) => {
                 />
                 <CourseColumn
                     label="Semester 2"
-                    type="sem2"
+                    type="Semester 2"
                     selectedYear={selectedYear}
                     selectedProgramCode={selectedProgramCode}
                     programs={programs}

@@ -36,10 +36,23 @@ export default function HeaderBar() {
       setCurrentDate(date.toLocaleDateString(undefined, dateOptions));
       setCurrentTime(date.toLocaleTimeString(undefined, timeOptions));
 
-      const termStart = new Date("2024-09-16");
+      const termStart = new Date("2025-09-22");
       const weekNum =
         Math.ceil((+date - +termStart) / (7 * 24 * 60 * 60 * 1000)) + 1;
-      setAcademicWeek(`Week ${weekNum > 0 ? weekNum : 0}`);
+      console.log(typeof weekNum)
+        if (weekNum <=13){
+          console.log(weekNum <=13)
+          setAcademicWeek(`Semester 1 Week ${weekNum}`);
+        }
+        else if (weekNum<=14 && weekNum<=17){
+          setAcademicWeek(`Winter Break Week ${weekNum-14}`);
+        }
+        else if (weekNum<=18 && weekNum <=20){
+          setAcademicWeek(`Semester 1 Exam Week ${weekNum-18}`);
+        }
+        else if (weekNum <=21 && weekNum <=28){
+          setAcademicWeek(`Semester 2 Week ${weekNum-21}`);
+        }
     };
 
     updateDateTime();

@@ -1,477 +1,347 @@
-// CourseFlow.tsx
 "use client";
 
-import React, { useEffect, useState, useCallback, useMemo, useRef, Profiler } from "react";
-import { createClient } from "@supabase/supabase-js";
-import type { Edge, Node, NodeMouseHandler } from "reactflow";
-import ReactFlow, {
-  Background,
-  Controls,
-  MarkerType,
-  MiniMap,
-  Position,
-  useEdgesState,
-  useNodesState,
-  NodeChange,
-  EdgeChange,
-} from "reactflow";
-import "reactflow/dist/style.css";
-import { Course } from "@/lib/mockcourses";
-import { performanceMonitor } from "@/lib/utils";
+import React, {
+    useEffect,
+    useState,
+    useCallback,
+    useMemo,
+    useRef,
+    Profiler,
+} from "react";
 
-// Init Supabase
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+import ReactFlow, {
+    Background,
+    Controls,
+    MiniMap,
+    MarkerType,
+    Position,
+    useEdgesState,
+    useNodesState,
+    type Edge,
+    type Node,
+    type NodeMouseHandler,
+    type NodeChange,
+    type EdgeChange,
+} from "reactflow";
+
+import "reactflow/dist/style.css";
+
+import { programs } from "@/lib/programs";
+import { courses } from "@/lib/courses";
+import { performanceMonitor } from "@/lib/utils";
+import { Course } from "@/lib/types"
+
+/* ---------------- TYPES ---------------- */
+
 
 type Props = {
     program_id: string;
     selectedcourseid?: string;
-}
+};
 
 type ErrorState = {
     hasError: boolean;
     message: string;
-    type: 'network' | 'not_found' | 'malformed_data' | 'unknown';
+    type: "network" | "not_found" | "malformed_data" | "unknown";
 };
 
-// Layout cache for expensive calculations
-const layoutCache = new Map<string, { nodes: Node[], edges: Edge[] }>();
+type LayoutResult = {
+    nodes: Node[];
+    edges: Edge[];
+};
 
-// Debounce utility for performance
-function useDebounce<T>(value: T, delay: number): T {
-  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+/* ---------------- CACHE ---------------- */
 
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedValue(value);
-    }, delay);
+const layoutCache = new Map<string, LayoutResult>();
 
-    return () => {
-      clearTimeout(handler);
-    };
-  }, [value, delay]);
+/* ---------------- HELPERS ---------------- */
 
-  return debouncedValue;
-}
 
-// Virtual viewport for large graphs
-function useVirtualViewport(
-  nodes: Node[],
-  edges: Edge[],
-  viewportBounds: { x: number; y: number; width: number; height: number }
-) {
-  return useMemo(() => {
-    const BUFFER = 200; // Buffer around viewport
-    const visibleNodes = nodes.filter((node) => {
-      return (
-        node.position.x >= viewportBounds.x - BUFFER &&
-        node.position.x <= viewportBounds.x + viewportBounds.width + BUFFER &&
-        node.position.y >= viewportBounds.y - BUFFER &&
-        node.position.y <= viewportBounds.y + viewportBounds.height + BUFFER
-      );
+function buildDependencyEdges(
+    courses: Course[],
+    nodePositions: Record<string, { x: number; y: number }>
+): Edge[] {
+    const edges: Edge[] = [];
+
+    courses.forEach(course => {
+        const prereqs = course.prerequisites_list ?? [];
+        const coreqs = course.corequisites_list ?? [];
+
+        prereqs.forEach(src => {
+            if (nodePositions[src]) {
+                edges.push({
+                    id: `pre-${src}-${course.code}`,
+                    source: src,
+                    target: course.code,
+                    animated: true,
+                    style: { stroke: "#0077cc", strokeWidth: 2 },
+                    markerEnd: { type: MarkerType.ArrowClosed },
+                });
+            }
+        });
+
+        coreqs.forEach(src => {
+            if (nodePositions[src]) {
+                edges.push({
+                    id: `co-${src}-${course.code}`,
+                    source: src,
+                    target: course.code,
+                    animated: true,
+                    style: {
+                        stroke: "#00aa55",
+                        strokeWidth: 2,
+                        strokeDasharray: "4 2",
+                    },
+                    markerEnd: { type: MarkerType.ArrowClosed },
+                });
+            }
+        });
     });
 
-    const visibleNodeIds = new Set(visibleNodes.map(n => n.id));
-    const visibleEdges = edges.filter((edge) => 
-      visibleNodeIds.has(edge.source) && visibleNodeIds.has(edge.target)
-    );
-
-    return { nodes: visibleNodes, edges: visibleEdges };
-  }, [nodes, edges, viewportBounds.x, viewportBounds.y, viewportBounds.width, viewportBounds.height]);
+    return edges;
 }
 
-type Style = {
-  stroke?: string;
-  strokeWidth?: number;
-  strokeDasharray?: string;
-};
+function useDebounce<T>(value: T, delay: number): T {
+    const [debounced, setDebounced] = useState<T>(value);
+
+    useEffect(() => {
+        const t = setTimeout(() => setDebounced(value), delay);
+        return () => clearTimeout(t);
+    }, [value, delay]);
+
+    return debounced;
+}
 
 const MemoizedReactFlow = React.memo(ReactFlow);
 
-export default function CourseFlow({program_id, selectedcourseid}: Props) {
+/* ---------------- COMPONENT ---------------- */
+
+export default function CourseFlow({ program_id, selectedcourseid }: Props) {
     const [nodes, setNodes, onNodesChange] = useNodesState([]);
     const [edges, setEdges, onEdgesChange] = useEdgesState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<ErrorState>({ hasError: false, message: '', type: 'unknown' });
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<ErrorState>({
+        hasError: false,
+        message: "",
+        type: "unknown",
+    });
+
     const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
-    const [viewportBounds] = useState({ x: 0, y: 0, width: 1000, height: 800 });
-    
-    const debouncedSelectedCourseId = useDebounce(selectedcourseid, 100);
-    const coursesDataRef = useRef<Course[]>([]);
-    
-    // Virtual viewport for performance
-    const { nodes: virtualNodes, edges: virtualEdges } = useVirtualViewport(nodes, edges, viewportBounds);
+    const coursesRef = useRef<Course[]>([]);
 
-    // Reset error state when program_id changes
-    useEffect(() => {
-        setError({ hasError: false, message: '', type: 'unknown' });
-    }, [program_id]);
+    const debouncedSelected = useDebounce(selectedcourseid, 120);
 
-    // Memoized styled nodes to prevent unnecessary recalculations
-    const styledNodes = useMemo(() => {
-      return virtualNodes.map((node) => ({
-        ...node,
-        style: {
-          ...node.style,
-          border: node.id === selectedNodeId ? "3px solid #000" : "1px solid #999",
-          fontWeight: node.id === selectedNodeId ? "bold" : "normal",
-        },
-      }));
-    }, [virtualNodes, selectedNodeId]);
+    /* ---------------- LAYOUT ---------------- */
 
-    // Memoized styled edges
-    const styledEdges: Edge[] = useMemo(() => {
-      return virtualEdges.map((edge) => {
-        const isConnected = edge.source === selectedNodeId || edge.target === selectedNodeId;
-        return {
-          ...edge,
-          style: {
-            ...edge.style,
-            strokeWidth: isConnected ? 3 : 1,
-            stroke: isConnected ? '#000' : '#999',
-          },
-          markerEnd: {
-            type: MarkerType.ArrowClosed,
-            color: isConnected ? '#000' : '#999',
-          },
-        };
-      });
-    }, [virtualEdges, selectedNodeId]);
+    const calculateLayout = useCallback((list: Course[]): LayoutResult => {
+        performanceMonitor.startTiming("layout");
 
-    // Debounced effect for selected course changes
-    useEffect(() => {
-        if (debouncedSelectedCourseId && debouncedSelectedCourseId !== selectedNodeId) {
-            setSelectedNodeId(debouncedSelectedCourseId);
+        const key = `${program_id}-${list.map(c => c.code).join(",")}`;
+        const cached = layoutCache.get(key);
+        if (cached) {
+            performanceMonitor.endTiming("layout");
+            return cached;
         }
-    }, [debouncedSelectedCourseId, selectedNodeId]);
 
-    // Memoized layout calculation
-    const calculateLayout = useCallback((courses: Course[]) => {
-      performanceMonitor.startTiming('layout-calculation');
-      
-      const cacheKey = `${program_id}-${courses.length}-${courses.map(c => c.code).join(',')}`;
-      
-      // Check cache first
-      if (layoutCache.has(cacheKey)) {
-        performanceMonitor.endTiming('layout-calculation');
-        return layoutCache.get(cacheKey)!;
-      }
-
-      const levelMap: Record<number, Course[]> = {
-        1: [] as Course[],
-        2: [] as Course[],
-        3: [] as Course[],
-      };
-      
-      courses.forEach((c: Course) => {
-        if (levelMap[c.level]) {
-          levelMap[c.level].push(c);
-        }
-      });
-
-      const spacingX = 100;
-      const verticalJitter = 60;
-
-      const levelYOffset: Record<number, number> = {
-        3: 0,
-        2: 300,
-        1: 600,
-      };
-
-      const generatedNodes: Node[] = [];
-      const nodePositions: Record<string, { x: number; y: number }> = {};
-      const edgesList: Edge[] = [];
-
-      [3, 2, 1].forEach((level) => {
-        const levelCourses = levelMap[level];
-        const offsetX = -((levelCourses.length - 1) * spacingX) / 2;
-
-        levelCourses.forEach((course, j) => {
-          const x = offsetX + j * spacingX;
-          const y = levelYOffset[level] + (j % 2 === 0 ? -verticalJitter : verticalJitter);
-          const id = course.code;
-
-          nodePositions[id] = { x, y };
-
-          generatedNodes.push({
-            id,
-            type: "default",
-            position: { x, y },
-            data: { label: `${id}\n${course.title}` },
-            sourcePosition: Position.Top,
-            targetPosition: Position.Bottom,
-            style: {
-              padding: 10,
-              border: "1px solid #555",
-              borderRadius: 8,
-              width: 180,
-              whiteSpace: "pre-line",
-              backgroundColor: "#f5f5f5",
-            },
-          });
+        const levelMap: Record<1 | 2 | 3, Course[]> = { 1: [], 2: [], 3: [] };
+        list.forEach(c => {
+            const level = c.level as 1 | 2 | 3;
+            levelMap[level].push(c);
         });
-      });
 
-      // Add prerequisite and corequisite edges
-      const addEdges = (
-        type: "prerequisites_list" | "corequisites_list",
-        style: Style
-      ) => {
-        courses.forEach((course) => {
-          const deps = course[type];
-          if (deps) {
-            const related = deps.split(",").map((c: string) => c.trim());
-            related.forEach((target: string) => {
-              if (nodePositions[target]) {
-                edgesList.push({
-                  id: `e-${type}-${target}-${course.code}`,
-                  source: target,
-                  target: course.code,
-                  animated: true,
-                  style,
-                  markerEnd: {
-                    type: MarkerType.ArrowClosed,
-                    color: style.stroke,
-                  },
+
+        const spacingX = 110;
+        const jitter = 60;
+        const yOffset: Record<1 | 2 | 3, number> = { 3: 0, 2: 300, 1: 600 };
+
+        const nodePositions: Record<string, { x: number; y: number }> = {};
+        const outNodes: Node[] = [];
+
+        (Object.keys(levelMap) as string[])
+            .map(k => Number(k) as 1 | 2 | 3)
+            .forEach(level => {
+            const arr = levelMap[level];
+            const offsetX = -((arr.length - 1) * spacingX) / 2;
+
+            arr.forEach((course, i) => {
+                const x = offsetX + i * spacingX;
+                const y = yOffset[level] + (i % 2 === 0 ? -jitter : jitter);
+
+                nodePositions[course.code] = { x, y };
+
+                outNodes.push({
+                    id: course.code,
+                    position: { x, y },
+                    data: { label: `${course.code}\n${course.title}` },
+                    sourcePosition: Position.Top,
+                    targetPosition: Position.Bottom,
+                    style: {
+                        padding: 10,
+                        borderRadius: 8,
+                        width: 180,
+                        whiteSpace: "pre-line",
+                        backgroundColor: "#f5f5f5",
+                    },
                 });
-              }
             });
-          }
         });
-      };
 
-      addEdges("prerequisites_list", { stroke: "#0077cc", strokeWidth: 2 });
-      addEdges("corequisites_list", {
-        stroke: "#00aa55",
-        strokeWidth: 2,
-        strokeDasharray: "4 2",
-      });
+        const outEdges = buildDependencyEdges(list, nodePositions);
+        const result = { nodes: outNodes, edges: outEdges };
 
-      const result = { nodes: generatedNodes, edges: edgesList };
-      
-      // Cache the result
-      layoutCache.set(cacheKey, result);
-      
-      // Limit cache size
-      if (layoutCache.size > 10) {
-        const firstKey = layoutCache.keys().next().value;
-        if (firstKey) {
-          layoutCache.delete(firstKey);
+        layoutCache.set(key, result);
+        if (layoutCache.size > 8) {
+            const first = layoutCache.keys().next().value;
+            if (first) if (typeof first === "string") {
+                layoutCache.delete(first);
+            }
         }
-      }
-      
-      performanceMonitor.endTiming('layout-calculation');
-      return result;
+
+        performanceMonitor.endTiming("layout");
+        return result;
     }, [program_id]);
 
+    /* ---------------- DATA LOAD ---------------- */
+
     useEffect(() => {
-      let isCancelled = false;
-      
-      const fetchCourses = async () => {
-        if (!program_id?.trim()) {
-          setError({
-            hasError: true,
-            message: 'No program ID provided',
-            type: 'malformed_data'
-          });
-          setLoading(false);
-          return;
-        }
+        let cancelled = false;
 
-        setLoading(true);
-        setError({ hasError: false, message: '', type: 'unknown' });
+        async function load(): Promise<void> {
+            setLoading(true);
+            setError({ hasError: false, message: "", type: "unknown" });
 
-        try {
-          performanceMonitor.startTiming('program-courses-fetch');
-          const { data: courses, error: fetchError } = await supabase
-            .from("course_programs")
-            .select(
-              `
-        course_code,
-        courses (
-        *
-        )
-      `
-            )
-            .eq("program_id", program_id);
-          performanceMonitor.endTiming('program-courses-fetch');
+            try {
+                const program = programs.find(p => p.program_id === program_id);
 
-          if (isCancelled) return;
+                if (!program) {
+                    setError({
+                        hasError: true,
+                        message: "Program not found",
+                        type: "not_found",
+                    });
+                    setLoading(false);
+                    return;
+                }
+                console.log(program.courseCodes)
 
-          if (fetchError) {
-            console.error("Error fetching courses:", fetchError);
-            const errorType = fetchError.code === 'PGRST116' ? 'not_found' : 'network';
-            const errorMessage = fetchError.code === 'PGRST116' 
-              ? `Program "${program_id}" not found`
-              : `Failed to fetch program data: ${fetchError.message}`;
-            
-            setError({
-              hasError: true,
-              message: errorMessage,
-              type: errorType
-            });
-            setLoading(false);
-            return;
-          }
+                const programCourses: Course[] = courses.filter(c =>
+                    program.courseCodes.includes(c.code)
+                );
 
-          if (!courses || courses.length === 0) {
-            setError({
-              hasError: true,
-              message: `No courses found for program "${program_id}"`,
-              type: 'not_found'
-            });
-            setLoading(false);
-            return;
-          }
+                if (cancelled) return;
 
-          // Process courses
-          const allCourses: Course[] = [];
-          courses?.forEach((record) => {
-            const courseOrCourses = record.courses as Course | Course[];
+                coursesRef.current = programCourses;
 
-            if (Array.isArray(courseOrCourses)) {
-              allCourses.push(...courseOrCourses);
-            } else if (courseOrCourses && courseOrCourses.code) {
-              allCourses.push(courseOrCourses);
+                const layout = calculateLayout(programCourses);
+                setNodes(layout.nodes);
+                setEdges(layout.edges);
+                setLoading(false);
+
+            } catch (err: unknown) {
+                if (cancelled) return;
+
+                setError({
+                    hasError: true,
+                    message: err instanceof Error ? err.message : "Unknown error",
+                    type: "unknown",
+                });
+
+                setLoading(false);
             }
-          });
-
-          const filteredCourses = allCourses.filter(
-            (c): c is Course => !!c && !!c.code
-          );
-
-          if (filteredCourses.length === 0) {
-            setError({
-              hasError: true,
-              message: `No valid courses found for program "${program_id}"`,
-              type: 'not_found'
-            });
-            setLoading(false);
-            return;
-          }
-
-          if (isCancelled) return;
-
-          // Store courses data for reference
-          coursesDataRef.current = filteredCourses;
-
-          // Calculate layout with memoization
-          const { nodes: generatedNodes, edges: edgesList } = calculateLayout(filteredCourses);
-
-          setNodes(generatedNodes);
-          setEdges(edgesList);
-          setLoading(false);
-        } catch (error) {
-          if (!isCancelled) {
-            console.error("Error in fetchCourses:", error);
-            setError({
-              hasError: true,
-              message: error instanceof Error ? error.message : 'An unexpected error occurred',
-              type: 'unknown'
-            });
-            setLoading(false);
-          }
         }
-      };
 
-      fetchCourses();
-
-      return () => {
-        isCancelled = true;
-      };
+        load();
+        return () => { cancelled = true; };
     }, [program_id, calculateLayout, setNodes, setEdges]);
 
-    // Optimized change handlers
-    const handleNodesChange = useCallback((changes: NodeChange[]) => {
-      onNodesChange(changes);
-    }, [onNodesChange]);
+    /* ---------------- SELECTION ---------------- */
 
-    const handleEdgesChange = useCallback((changes: EdgeChange[]) => {
-      onEdgesChange(changes);
-    }, [onEdgesChange]);
+    useEffect(() => {
+        if (debouncedSelected) setSelectedNodeId(debouncedSelected);
+    }, [debouncedSelected]);
 
-    const handleNodeClick: NodeMouseHandler = useCallback((_, node) => {
-      setSelectedNodeId(node.id);
+    /* ---------------- STYLING ---------------- */
+
+    const styledNodes = useMemo<Node[]>(() =>
+            nodes.map(n => ({
+                ...n,
+                style: {
+                    ...n.style,
+                    border: n.id === selectedNodeId ? "3px solid #000" : "1px solid #999",
+                    fontWeight: n.id === selectedNodeId ? "bold" : "normal",
+                },
+            }))
+        , [nodes, selectedNodeId]);
+
+    const styledEdges = useMemo<Edge[]>(() =>
+            edges.map(e => {
+                const active =
+                    e.source === selectedNodeId || e.target === selectedNodeId;
+
+                return {
+                    ...e,
+                    style: {
+                        ...e.style,
+                        strokeWidth: active ? 3 : 1,
+                        stroke: active ? "#000" : "#999",
+                    },
+                };
+            })
+        , [edges, selectedNodeId]);
+
+    /* ---------------- HANDLERS ---------------- */
+
+    const onNodeClick: NodeMouseHandler = useCallback((_, node) => {
+        setSelectedNodeId(node.id);
     }, []);
 
-    // Loading state
-    if (loading) {
-      return (
-        <div style={{ width: "100%", height: "95vh" }} className="flex items-center justify-center bg-gray-50">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading program dependency graph...</p>
-          </div>
-        </div>
-      );
-    }
+    const handleNodesChange = useCallback(
+        (c: NodeChange[]) => onNodesChange(c),
+        [onNodesChange]
+    );
 
-    // Error states
-    if (error.hasError) {
-      const errorIcon = error.type === 'not_found' ? '🔍' : '❌';
-      const retryButton = error.type === 'network' && (
-        <button 
-          onClick={() => window.location.reload()}
-          className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-        >
-          Retry
-        </button>
-      );
+    const handleEdgesChange = useCallback(
+        (c: EdgeChange[]) => onEdgesChange(c),
+        [onEdgesChange]
+    );
 
-      return (
-        <div style={{ width: "100%", height: "95vh" }} className="flex items-center justify-center bg-red-50">
-          <div className="text-center">
-            <div className="text-4xl mb-2">{errorIcon}</div>
-            <p className="text-red-600 font-semibold mb-1">Failed to load program graph</p>
-            <p className="text-red-500 text-sm">{error.message}</p>
-            {retryButton}
-          </div>
-        </div>
-      );
-    }
+    /* ---------------- UI STATES ---------------- */
 
-    // Empty state (program exists but has no courses)
-    if (coursesDataRef.current.length === 0) {
-      return (
-        <div style={{ width: "100%", height: "95vh" }} className="flex items-center justify-center bg-gray-50">
-          <div className="text-center">
-            <div className="text-4xl mb-2">📚</div>
-            <p className="text-gray-600 font-semibold mb-1">No Courses Found</p>
-            <p className="text-gray-500 text-sm">
-              Program {program_id} has no courses to display.
-            </p>
-          </div>
-        </div>
-      );
-    }
+    if (loading) return <div className="p-6">Loading graph…</div>;
 
-    const onRenderCallback = (id: string, phase: string, actualDuration: number) => {
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`🔍 ${id} (${phase}): ${actualDuration.toFixed(2)}ms`);
-      }
-    };
+    if (error.hasError)
+        return <div className="p-6 text-red-600">{error.message}</div>;
+
+    if (coursesRef.current.length === 0)
+        return <div className="p-6">No courses found.</div>;
+
+    /* ---------------- RENDER ---------------- */
 
     return (
-      <div style={{ width: "100%", height: "95vh" }}>
-        <Profiler id="ProgramDependencyGraph" onRender={onRenderCallback}>
-          <MemoizedReactFlow
-            nodes={styledNodes}
-            edges={styledEdges}
-            onNodesChange={handleNodesChange}
-            onEdgesChange={handleEdgesChange}
-            onNodeClick={handleNodeClick}
-            fitView
-            maxZoom={2}
-            minZoom={0.1}
-            defaultViewport={{ x: 0, y: 0, zoom: 1 }}
-          >
-            <MiniMap />
-            <Controls />
-            <Background gap={16} />
-          </MemoizedReactFlow>
-        </Profiler>
-      </div>
+        <div style={{ width: "100%", height: "95vh" }}>
+            <Profiler
+                id="CourseFlow"
+                onRender={(id, phase, dur) => {
+                    if (process.env.NODE_ENV === "development") {
+                        console.log(`${id} ${phase}: ${dur.toFixed(1)}ms`);
+                    }
+                }}
+            >
+                <MemoizedReactFlow
+                    nodes={styledNodes}
+                    edges={styledEdges}
+                    onNodesChange={handleNodesChange}
+                    onEdgesChange={handleEdgesChange}
+                    onNodeClick={onNodeClick}
+                    fitView
+                    minZoom={0.1}
+                    maxZoom={2}
+                >
+                    <MiniMap />
+                    <Controls />
+                    <Background gap={16} />
+                </MemoizedReactFlow>
+            </Profiler>
+        </div>
     );
 }

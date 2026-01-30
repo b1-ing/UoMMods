@@ -1,32 +1,313 @@
-// programs.ts
+import { Program } from './types';
 
-export type Program = {
-  program_id: string;
-  title: string;
-  firstyrfy: string[];
-  firstyrs1comp: string[];
-  firstyrs1op: string[];
-  firstyrs2comp: string[];
-  firstyrs2op: string[];
-  y1yearcred: number;
-  y1sem1cred: number;
-  y1sem2cred: number;
-  secondyrfy: string[];
-  secondyrs1comp: string[];
-  secondyrs1op: string[];
-  secondyrs2comp: string[];
-  secondyrs2op: string[];
-  y2yearcred: number;
-  y2sem1cred: number;
-  y2sem2cred: number;
-  thirdyrfy: string[];
-  thirdyrs1comp: string[];
-  thirdyrs1op: string[];
-  thirdyrs2comp: string[];
-  thirdyrs2op: string[];
-  y3yearcred: number;
-  y3sem1cred: number;
-  y3sem2cred: number;
-
-};
-
+export const programs: Program[] = [
+  {
+    "program_id": "G400",
+    "title": "BSc Computer Science",
+    "courseCodes": [
+      "COMP10120",
+      "COMP11120",
+      "COMP11212",
+      "COMP12111",
+      "COMP13212",
+      "COMP15111",
+      "COMP15212",
+      "COMP16321",
+      "COMP16412",
+      "COMP21111",
+      "COMP22111",
+      "COMP22712",
+      "COMP23111",
+      "COMP23311",
+      "COMP23412",
+      "COMP24011",
+      "COMP24112",
+      "COMP24412",
+      "COMP25212",
+      "COMP26020",
+      "COMP26120",
+      "COMP27112",
+      "COMP28112",
+      "COMP30040",
+      "COMP31311",
+      "COMP32211",
+      "COMP32412",
+      "COMP33312",
+      "COMP33511",
+      "COMP34111",
+      "COMP34212",
+      "COMP34312",
+      "COMP34612",
+      "COMP34711",
+      "COMP34812",
+      "COMP35112",
+      "COMP36111",
+      "COMP36212",
+      "COMP37111",
+      "COMP37212",
+      "COMP38311",
+      "EEEN31001",
+      "MCEL30031",
+      "MCEL30032"
+    ],
+    "firstyrfy": [
+      "COMP10120",
+      "COMP11120"
+    ],
+    "firstyrs1comp": [
+      "COMP12111",
+      "COMP15111",
+      "COMP16321"
+    ],
+    "firstyrs1op": [],
+    "firstyrs2comp": [
+      "COMP11212",
+      "COMP13212",
+      "COMP15212",
+      "COMP16412"
+    ],
+    "firstyrs2op": [],
+    "secondyrfy": [
+      "COMP26020",
+      "COMP26120"
+    ],
+    "secondyrs1comp": [
+      "COMP23311"
+    ],
+    "secondyrs1op": [
+      "COMP21111",
+      "COMP22111",
+      "COMP23111",
+      "COMP24011"
+    ],
+    "secondyrs2comp": [
+      "COMP23412"
+    ],
+    "secondyrs2op": [
+      "COMP22712",
+      "COMP24112",
+      "COMP24412",
+      "COMP25212",
+      "COMP27112",
+      "COMP28112"
+    ],
+    "thirdyrfy": [
+      "COMP30040"
+    ],
+    "thirdyrs1comp": [],
+    "thirdyrs1op": [
+      "COMP31311",
+      "COMP32211",
+      "COMP33511",
+      "COMP34111",
+      "COMP34711",
+      "COMP36111",
+      "COMP37111",
+      "COMP38311",
+      "EEEN31001"
+    ],
+    "thirdyrs2comp": [],
+    "thirdyrs2op": [
+      "COMP32412",
+      "COMP33312",
+      "COMP34212",
+      "COMP34312",
+      "COMP34612",
+      "COMP34812",
+      "COMP35112",
+      "COMP36212",
+      "COMP37212",
+      "MCEL30032"
+    ]
+  },
+  {
+    "program_id": "GG14",
+    "title": "BSc Computer Science and Mathematics",
+    "courseCodes": [
+      "COMP10120",
+      "COMP11212",
+      "COMP13212",
+      "COMP15212",
+      "COMP16321",
+      "COMP16412",
+      "COMP21111",
+      "COMP23111",
+      "COMP23311",
+      "COMP23412",
+      "COMP24011",
+      "COMP24112",
+      "COMP24412",
+      "COMP26020",
+      "COMP26120",
+      "COMP27112",
+      "COMP28112",
+      "COMP30030",
+      "COMP31311",
+      "COMP33312",
+      "COMP33511",
+      "COMP34111",
+      "COMP34212",
+      "COMP34312",
+      "COMP34612",
+      "COMP34711",
+      "COMP34812",
+      "COMP36111",
+      "COMP36212",
+      "COMP37111",
+      "COMP37212",
+      "COMP38311",
+      "COMP39112",
+      "MATH11022",
+      "MATH11121",
+      "MATH11412",
+      "MATH11711",
+      "MATH11712",
+      "MATH20521",
+      "MATH20912",
+      "MATH21111",
+      "MATH21112",
+      "MATH21120",
+      "MATH24411",
+      "MATH24412",
+      "MATH24420",
+      "MATH27711",
+      "MATH27712",
+      "MATH27720",
+      "MATH29141",
+      "MATH30002",
+      "MATH31010",
+      "MATH31061",
+      "MATH31072",
+      "MATH32010",
+      "MATH32031",
+      "MATH32052",
+      "MATH32062",
+      "MATH32072",
+      "MATH32091",
+      "MATH33021",
+      "MATH34011",
+      "MATH35012",
+      "MATH35020",
+      "MATH35031",
+      "MATH35041",
+      "MATH35062",
+      "MATH36022",
+      "MATH36031",
+      "MATH36160",
+      "MATH37002",
+      "MATH37011",
+      "MATH37021",
+      "MATH38032",
+      "MATH38072",
+      "MATH38161",
+      "MATH38171",
+      "MATH39032",
+      "MCEL30031",
+      "MCEL30032"
+    ],
+    "firstyrfy": [
+      "COMP10120"
+    ],
+    "firstyrs1comp": [
+      "COMP16321",
+      "MATH11121",
+      "MATH11711"
+    ],
+    "firstyrs1op": [],
+    "firstyrs2comp": [
+      "COMP16412",
+      "MATH11022"
+    ],
+    "firstyrs2op": [
+      "COMP11212",
+      "COMP13212",
+      "COMP15212",
+      "MATH11412",
+      "MATH11712"
+    ],
+    "secondyrfy": [
+      "MATH21120",
+      "COMP26020",
+      "COMP26120",
+      "MATH24420",
+      "MATH27720"
+    ],
+    "secondyrs1comp": [],
+    "secondyrs1op": [
+      "COMP21111",
+      "COMP23111",
+      "COMP23311",
+      "COMP24011",
+      "MATH20521",
+      "MATH21111",
+      "MATH24411",
+      "MATH27711",
+      "MATH29141"
+    ],
+    "secondyrs2comp": [],
+    "secondyrs2op": [
+      "COMP23412",
+      "COMP24112",
+      "COMP24412",
+      "COMP27112",
+      "COMP28112",
+      "MATH20912",
+      "MATH21112",
+      "MATH24412",
+      "MATH27712"
+    ],
+    "thirdyrfy": [
+      "COMP30030",
+      "MATH31010",
+      "MATH32010",
+      "MATH35020",
+      "MATH36160"
+    ],
+    "thirdyrs1comp": [],
+    "thirdyrs1op": [
+      "COMP31311",
+      "COMP33511",
+      "COMP34111",
+      "COMP34711",
+      "COMP36111",
+      "COMP37111",
+      "COMP38311",
+      "MATH31061",
+      "MATH32031",
+      "MATH32091",
+      "MATH33021",
+      "MATH34011",
+      "MATH35031",
+      "MATH35041",
+      "MATH36031",
+      "MATH37011",
+      "MATH37021",
+      "MATH38161",
+      "MATH38171"
+    ],
+    "thirdyrs2comp": [],
+    "thirdyrs2op": [
+      "COMP33312",
+      "COMP34212",
+      "COMP34312",
+      "COMP34612",
+      "COMP34812",
+      "COMP36212",
+      "COMP37212",
+      "COMP39112",
+      "MATH30002",
+      "MATH31072",
+      "MATH32052",
+      "MATH32062",
+      "MATH32072",
+      "MATH35012",
+      "MATH35062",
+      "MATH36022",
+      "MATH37002",
+      "MATH38032",
+      "MATH38072",
+      "MATH39032",
+      "MCEL30032"
+    ]
+  }
+];

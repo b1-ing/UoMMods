@@ -496,35 +496,35 @@ export const courses: Course[] = [
     },
     "gradestats": [
       {
-        "year": "23/24",
-        "mean": 65.9,
+        "year": "24/25",
+        "mean": 66.5,
         "stdDev": null,
-        "n": 235,
+        "n": 273,
         "marks": null
       },
       {
         "year": "23/24",
-        "mean": 60.5,
+        "mean": 68.6,
         "stdDev": null,
-        "n": 395,
+        "n": 340,
         "marks": null
       },
       {
         "year": "22/23",
-        "mean": 65.9,
+        "mean": 64.1,
         "stdDev": null,
         "n": 286,
         "marks": null
       },
       {
-        "year": "22/23",
-        "mean": 65.4,
+        "year": "21/22",
+        "mean": 71.2,
         "stdDev": null,
-        "n": 301,
+        "n": 378,
         "marks": null
       }
     ],
-    "overallmean": 64.43,
+    "overallmean": 67.6,
     "title": "Software Engineering 2",
     "program_ids": [
       "G400",
@@ -551,35 +551,35 @@ export const courses: Course[] = [
     },
     "gradestats": [
       {
-        "year": "23/24",
-        "mean": 65.7,
+        "year": "24/25",
+        "mean": 62.1,
         "stdDev": null,
-        "n": 284,
+        "n": 243,
         "marks": null
       },
       {
         "year": "23/24",
-        "mean": 65.5,
+        "mean": 62.4,
         "stdDev": null,
-        "n": 492,
+        "n": 289,
         "marks": null
       },
       {
         "year": "22/23",
-        "mean": 65.2,
+        "mean": 59.6,
         "stdDev": null,
-        "n": 336,
+        "n": 456,
         "marks": null
       },
       {
-        "year": "22/23",
-        "mean": 71.7,
+        "year": "21/22",
+        "mean": 71.4,
         "stdDev": null,
-        "n": 374,
+        "n": 352,
         "marks": null
       }
     ],
-    "overallmean": 67.03,
+    "overallmean": 63.9,
     "title": "Programming Languages & Paradigms",
     "program_ids": [
       "G400",
@@ -603,40 +603,33 @@ export const courses: Course[] = [
     },
     "gradestats": [
       {
-        "year": "23/24",
-        "mean": 72.4,
+        "year": "24/25",
+        "mean": 65.7,
         "stdDev": null,
-        "n": 179,
+        "n": 284,
         "marks": null
       },
       {
         "year": "23/24",
-        "mean": 70.5,
+        "mean": 65.2,
         "stdDev": null,
-        "n": 225,
+        "n": 336,
         "marks": null
       },
       {
         "year": "22/23",
-        "mean": 65.9,
+        "mean": 65.5,
         "stdDev": null,
-        "n": 179,
-        "marks": null
-      },
-      {
-        "year": "22/23",
-        "mean": 71.6,
-        "stdDev": null,
-        "n": 332,
+        "n": 492,
         "marks": null
       },
       {
         "year": "21/22",
-        "mean": 72.9,
+        "mean": 71.7,
         "stdDev": null,
-        "n": 235,
+        "n": 374,
         "marks": null
-      }
+      },
     ],
     "overallmean": 70.66,
     "title": "Algorithms and Data Structures",
@@ -767,35 +760,35 @@ export const courses: Course[] = [
     },
     "gradestats": [
       {
-        "year": "23/24",
-        "mean": 66.5,
+        "year": "24/25",
+        "mean": 66.8,
         "stdDev": null,
-        "n": 273,
+        "n": 34,
         "marks": null
       },
       {
         "year": "23/24",
-        "mean": 64.1,
+        "mean": 73.7,
         "stdDev": null,
-        "n": 472,
+        "n": 24,
         "marks": null
       },
       {
         "year": "22/23",
-        "mean": 68.6,
+        "mean": 68.5,
         "stdDev": null,
-        "n": 340,
+        "n": 57,
         "marks": null
       },
       {
-        "year": "22/23",
-        "mean": 71.2,
+        "year": "21/22",
+        "mean": 67.1,
         "stdDev": null,
-        "n": 378,
+        "n": 40,
         "marks": null
       }
     ],
-    "overallmean": 67.6,
+    "overallmean": 276.1,
     "title": "Microcontrollers",
     "program_ids": [
       "G400"
@@ -898,35 +891,35 @@ export const courses: Course[] = [
     },
     "gradestats": [
       {
-        "year": "23/24",
-        "mean": 59.1,
+        "year": "24/25",
+        "mean": 65.9,
         "stdDev": null,
-        "n": 44,
+        "n": 235,
         "marks": null
       },
       {
         "year": "23/24",
-        "mean": 57.7,
+        "mean": 65.9,
         "stdDev": null,
-        "n": 135,
+        "n": 286,
         "marks": null
       },
       {
         "year": "22/23",
-        "mean": 60.3,
+        "mean": 60.5,
         "stdDev": null,
-        "n": 62,
+        "n": 395,
         "marks": null
       },
       {
         "year": "22/23",
-        "mean": 59.4,
+        "mean": 65.4,
         "stdDev": null,
-        "n": 119,
+        "n": 301,
         "marks": null
       }
     ],
-    "overallmean": 59.12,
+    "overallmean": 64.4,
     "title": "Machine Learning",
     "program_ids": [
       "G400",
@@ -953,31 +946,31 @@ export const courses: Course[] = [
     },
     "gradestats": [
       {
-        "year": "23/24",
-        "mean": 61.8,
+        "year": "24/25",
+        "mean": 59.1,
         "stdDev": null,
-        "n": 41,
+        "n": 44,
         "marks": null
       },
       {
         "year": "23/24",
-        "mean": 53.3,
+        "mean": 60.3,
         "stdDev": null,
-        "n": 61,
+        "n": 62,
         "marks": null
       },
       {
         "year": "22/23",
-        "mean": 61.2,
+        "mean": 57.7,
         "stdDev": null,
-        "n": 31,
+        "n": 135,
         "marks": null
       },
       {
         "year": "22/23",
-        "mean": 64.4,
+        "mean": 59.4,
         "stdDev": null,
-        "n": 50,
+        "n": 119,
         "marks": null
       }
     ],
@@ -1004,35 +997,35 @@ export const courses: Course[] = [
     },
     "gradestats": [
       {
-        "year": "23/24",
-        "mean": 62.1,
+        "year": "24/25",
+        "mean": 61.8,
         "stdDev": null,
-        "n": 243,
+        "n": 41,
         "marks": null
       },
       {
         "year": "23/24",
-        "mean": 59.6,
+        "mean": 61.2,
         "stdDev": null,
-        "n": 456,
+        "n": 31,
         "marks": null
       },
       {
         "year": "22/23",
-        "mean": 62.4,
+        "mean": 53.3,
         "stdDev": null,
-        "n": 289,
+        "n": 61,
         "marks": null
       },
       {
         "year": "22/23",
-        "mean": 71.4,
+        "mean": 64.4,
         "stdDev": null,
-        "n": 352,
+        "n": 50,
         "marks": null
       }
     ],
-    "overallmean": 63.88,
+    "overallmean": 60.2,
     "title": "System Architecture",
     "program_ids": [
       "G400"
@@ -1054,35 +1047,35 @@ export const courses: Course[] = [
     },
     "gradestats": [
       {
-        "year": "23/24",
-        "mean": 69.0,
+        "year": "24/25 (Scaled)",
+        "mean": 72.4,
         "stdDev": null,
-        "n": 149,
+        "n": 179,
         "marks": null
       },
       {
         "year": "23/24",
-        "mean": 61.9,
+        "mean": 70.5,
         "stdDev": null,
-        "n": 261,
-        "marks": null
-      },
-      {
-        "year": "22/23",
-        "mean": 61.7,
-        "stdDev": null,
-        "n": 162,
+        "n": 225,
         "marks": null
       },
       {
         "year": "22/23",
         "mean": 71.6,
         "stdDev": null,
-        "n": 218,
+        "n": 332,
+        "marks": null
+      },
+      {
+        "year": "21/22",
+        "mean": 72.9,
+        "stdDev": null,
+        "n": 235,
         "marks": null
       }
     ],
-    "overallmean": 66.05,
+    "overallmean": 71.9,
     "title": "Introduction to Visual Computing",
     "program_ids": [
       "G400",
@@ -1107,7 +1100,36 @@ export const courses: Course[] = [
       "Written exam": 50,
       "Practical skills assessment": 50
     },
-    "gradestats": null,
+    "gradestats": [
+      {
+        "year": "24/25",
+        "mean": 69.0,
+        "stdDev": null,
+        "n": 149,
+        "marks": null
+      },
+      {
+        "year": "23/24",
+        "mean": 61.7,
+        "stdDev": null,
+        "n": 162,
+        "marks": null
+      },
+      {
+        "year": "22/23",
+        "mean": 61.9,
+        "stdDev": null,
+        "n": 261,
+        "marks": null
+      },
+      {
+        "year": "21/22",
+        "mean": 71.6,
+        "stdDev": null,
+        "n": 218,
+        "marks": null
+      }
+    ],
     "overallmean": null,
     "title": "Distributed Systems",
     "program_ids": [

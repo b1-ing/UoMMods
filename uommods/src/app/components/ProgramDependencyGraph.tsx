@@ -29,13 +29,12 @@ import "reactflow/dist/style.css";
 import { programs } from "@/lib/programs";
 import { courses } from "@/lib/courses";
 import { performanceMonitor } from "@/lib/utils";
-import { Course } from "@/lib/types"
+import { Course } from "@/lib/types";
 
 /* ---------------- TYPES ---------------- */
 
-
 type Props = {
-    program_id: string;
+    program_id?: string;
     selectedcourseid?: string;
 };
 
@@ -56,18 +55,17 @@ const layoutCache = new Map<string, LayoutResult>();
 
 /* ---------------- HELPERS ---------------- */
 
-
 function buildDependencyEdges(
     courses: Course[],
     nodePositions: Record<string, { x: number; y: number }>
 ): Edge[] {
     const edges: Edge[] = [];
 
-    courses.forEach(course => {
+    courses.forEach((course) => {
         const prereqs = course.prerequisites_list ?? [];
         const coreqs = course.corequisites_list ?? [];
 
-        prereqs.forEach(src => {
+        prereqs.forEach((src) => {
             if (nodePositions[src]) {
                 edges.push({
                     id: `pre-${src}-${course.code}`,
@@ -80,7 +78,7 @@ function buildDependencyEdges(
             }
         });
 
-        coreqs.forEach(src => {
+        coreqs.forEach((src) => {
             if (nodePositions[src]) {
                 edges.push({
                     id: `co-${src}-${course.code}`,
@@ -116,7 +114,8 @@ const MemoizedReactFlow = React.memo(ReactFlow);
 
 /* ---------------- COMPONENT ---------------- */
 
-export default function CourseFlow({ program_id, selectedcourseid }: Props) {
+export default function CourseFlow({ program_id: initialProgramId = "G400", selectedcourseid }: Props) {
+    const [activeProgramId, setActiveProgramId] = useState<string>(initialProgramId);
     const [nodes, setNodes, onNodesChange] = useNodesState([]);
     const [edges, setEdges, onEdgesChange] = useEdgesState([]);
     const [loading, setLoading] = useState(false);
@@ -131,12 +130,19 @@ export default function CourseFlow({ program_id, selectedcourseid }: Props) {
 
     const debouncedSelected = useDebounce(selectedcourseid, 120);
 
+    /* Sync active program if prop changes */
+    useEffect(() => {
+        if (initialProgramId) {
+            setActiveProgramId(initialProgramId);
+        }
+    }, [initialProgramId]);
+
     /* ---------------- LAYOUT ---------------- */
 
-    const calculateLayout = useCallback((list: Course[]): LayoutResult => {
+    const calculateLayout = useCallback((list: Course[], progId: string): LayoutResult => {
         performanceMonitor.startTiming("layout");
 
-        const key = `${program_id}-${list.map(c => c.code).join(",")}`;
+        const key = `${progId}-${list.map((c) => c.code).join(",")}`;
         const cached = layoutCache.get(key);
         if (cached) {
             performanceMonitor.endTiming("layout");
@@ -144,47 +150,50 @@ export default function CourseFlow({ program_id, selectedcourseid }: Props) {
         }
 
         const levelMap: Record<1 | 2 | 3, Course[]> = { 1: [], 2: [], 3: [] };
-        list.forEach(c => {
-            const level = c.level as 1 | 2 | 3;
-            levelMap[level].push(c);
+        list.forEach((c) => {
+            const level = (c.level ?? 1) as 1 | 2 | 3;
+            if (levelMap[level]) {
+                levelMap[level].push(c);
+            }
         });
 
-
-        const spacingX = 110;
-        const jitter = 60;
-        const yOffset: Record<1 | 2 | 3, number> = { 3: 0, 2: 300, 1: 600 };
+        const spacingX = 190;
+        const jitter = 40;
+        const yOffset: Record<1 | 2 | 3, number> = { 3: 0, 2: 260, 1: 520 };
 
         const nodePositions: Record<string, { x: number; y: number }> = {};
         const outNodes: Node[] = [];
 
         (Object.keys(levelMap) as string[])
-            .map(k => Number(k) as 1 | 2 | 3)
-            .forEach(level => {
-            const arr = levelMap[level];
-            const offsetX = -((arr.length - 1) * spacingX) / 2;
+            .map((k) => Number(k) as 1 | 2 | 3)
+            .forEach((level) => {
+                const arr = levelMap[level];
+                const offsetX = -((arr.length - 1) * spacingX) / 2;
 
-            arr.forEach((course, i) => {
-                const x = offsetX + i * spacingX;
-                const y = yOffset[level] + (i % 2 === 0 ? -jitter : jitter);
+                arr.forEach((course, i) => {
+                    const x = offsetX + i * spacingX;
+                    const y = yOffset[level] + (i % 2 === 0 ? -jitter : jitter);
 
-                nodePositions[course.code] = { x, y };
+                    nodePositions[course.code] = { x, y };
 
-                outNodes.push({
-                    id: course.code,
-                    position: { x, y },
-                    data: { label: `${course.code}\n${course.title}` },
-                    sourcePosition: Position.Top,
-                    targetPosition: Position.Bottom,
-                    style: {
-                        padding: 10,
-                        borderRadius: 8,
-                        width: 180,
-                        whiteSpace: "pre-line",
-                        backgroundColor: "#f5f5f5",
-                    },
+                    outNodes.push({
+                        id: course.code,
+                        position: { x, y },
+                        data: { label: `${course.code}\n${course.title}` },
+                        sourcePosition: Position.Top,
+                        targetPosition: Position.Bottom,
+                        style: {
+                            padding: 10,
+                            borderRadius: 8,
+                            width: 170,
+                            fontSize: 12,
+                            whiteSpace: "pre-line",
+                            backgroundColor: "#ffffff",
+                            boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+                        },
+                    });
                 });
             });
-        });
 
         const outEdges = buildDependencyEdges(list, nodePositions);
         const result = { nodes: outNodes, edges: outEdges };
@@ -192,14 +201,14 @@ export default function CourseFlow({ program_id, selectedcourseid }: Props) {
         layoutCache.set(key, result);
         if (layoutCache.size > 8) {
             const first = layoutCache.keys().next().value;
-            if (first) if (typeof first === "string") {
+            if (first && typeof first === "string") {
                 layoutCache.delete(first);
             }
         }
 
         performanceMonitor.endTiming("layout");
         return result;
-    }, [program_id]);
+    }, []);
 
     /* ---------------- DATA LOAD ---------------- */
 
@@ -211,20 +220,25 @@ export default function CourseFlow({ program_id, selectedcourseid }: Props) {
             setError({ hasError: false, message: "", type: "unknown" });
 
             try {
-                const program = programs.find(p => p.program_id === program_id);
+                // Case-insensitive program search to prevent "not found" errors
+                const targetCode = activeProgramId.trim().toUpperCase();
+                const program = programs.find(
+                    (p) => p.program_id?.toUpperCase() === targetCode
+                );
 
                 if (!program) {
                     setError({
                         hasError: true,
-                        message: "Program not found",
+                        message: `Program "${activeProgramId}" not found. Available programs: ${programs
+                            .map((p) => p.program_id)
+                            .join(", ")}`,
                         type: "not_found",
                     });
                     setLoading(false);
                     return;
                 }
-                console.log(program.courseCodes)
 
-                const programCourses: Course[] = courses.filter(c =>
+                const programCourses: Course[] = courses.filter((c) =>
                     program.courseCodes.includes(c.code)
                 );
 
@@ -232,11 +246,10 @@ export default function CourseFlow({ program_id, selectedcourseid }: Props) {
 
                 coursesRef.current = programCourses;
 
-                const layout = calculateLayout(programCourses);
+                const layout = calculateLayout(programCourses, targetCode);
                 setNodes(layout.nodes);
                 setEdges(layout.edges);
                 setLoading(false);
-
             } catch (err: unknown) {
                 if (cancelled) return;
 
@@ -251,43 +264,52 @@ export default function CourseFlow({ program_id, selectedcourseid }: Props) {
         }
 
         load();
-        return () => { cancelled = true; };
-    }, [program_id, calculateLayout, setNodes, setEdges]);
+        return () => {
+            cancelled = true;
+        };
+    }, [activeProgramId, calculateLayout, setNodes, setEdges]);
+
 
     /* ---------------- SELECTION ---------------- */
 
     useEffect(() => {
-        if (debouncedSelected) setSelectedNodeId(debouncedSelected);
+        // Standardize to uppercase so URL route params like 'comp10001' match graph nodes like 'COMP10001'
+        const targetCode = debouncedSelected ? debouncedSelected.toUpperCase() : null;
+        setSelectedNodeId(targetCode);
     }, [debouncedSelected]);
 
     /* ---------------- STYLING ---------------- */
 
-    const styledNodes = useMemo<Node[]>(() =>
-            nodes.map(n => ({
+    const styledNodes = useMemo<Node[]>(
+        () =>
+            nodes.map((n) => ({
                 ...n,
                 style: {
                     ...n.style,
-                    border: n.id === selectedNodeId ? "3px solid #000" : "1px solid #999",
+                    border: n.id === selectedNodeId ? "2px solid #2563eb" : "1px solid #cbd5e1",
                     fontWeight: n.id === selectedNodeId ? "bold" : "normal",
+                    backgroundColor: n.id === selectedNodeId ? "#eff6ff" : "#ffffff",
                 },
-            }))
-        , [nodes, selectedNodeId]);
+            })),
+        [nodes, selectedNodeId]
+    );
 
-    const styledEdges = useMemo<Edge[]>(() =>
-            edges.map(e => {
-                const active =
-                    e.source === selectedNodeId || e.target === selectedNodeId;
+    const styledEdges = useMemo<Edge[]>(
+        () =>
+            edges.map((e) => {
+                const active = e.source === selectedNodeId || e.target === selectedNodeId;
 
                 return {
                     ...e,
                     style: {
                         ...e.style,
-                        strokeWidth: active ? 3 : 1,
-                        stroke: active ? "#000" : "#999",
+                        strokeWidth: active ? 3 : 1.5,
+                        stroke: active ? "#2563eb" : "#94a3b8",
                     },
                 };
-            })
-        , [edges, selectedNodeId]);
+            }),
+        [edges, selectedNodeId]
+    );
 
     /* ---------------- HANDLERS ---------------- */
 
@@ -295,53 +317,82 @@ export default function CourseFlow({ program_id, selectedcourseid }: Props) {
         setSelectedNodeId(node.id);
     }, []);
 
-    const handleNodesChange = useCallback(
-        (c: NodeChange[]) => onNodesChange(c),
-        [onNodesChange]
-    );
+    const handleNodesChange = useCallback((c: NodeChange[]) => onNodesChange(c), [onNodesChange]);
 
-    const handleEdgesChange = useCallback(
-        (c: EdgeChange[]) => onEdgesChange(c),
-        [onEdgesChange]
-    );
-
-    /* ---------------- UI STATES ---------------- */
-
-    if (loading) return <div className="p-6">Loading graph…</div>;
-
-    if (error.hasError)
-        return <div className="p-6 text-red-600">{error.message}</div>;
-
-    if (coursesRef.current.length === 0)
-        return <div className="p-6">No courses found.</div>;
+    const handleEdgesChange = useCallback((c: EdgeChange[]) => onEdgesChange(c), [onEdgesChange]);
 
     /* ---------------- RENDER ---------------- */
 
+    const tabOptions = ["G400", "GG14"];
+
     return (
-        <div style={{ width: "100%", height: "95vh" }}>
-            <Profiler
-                id="CourseFlow"
-                onRender={(id, phase, dur) => {
-                    if (process.env.NODE_ENV === "development") {
-                        console.log(`${id} ${phase}: ${dur.toFixed(1)}ms`);
-                    }
-                }}
-            >
-                <MemoizedReactFlow
-                    nodes={styledNodes}
-                    edges={styledEdges}
-                    onNodesChange={handleNodesChange}
-                    onEdgesChange={handleEdgesChange}
-                    onNodeClick={onNodeClick}
-                    fitView
-                    minZoom={0.1}
-                    maxZoom={2}
-                >
-                    <MiniMap />
-                    <Controls />
-                    <Background gap={16} />
-                </MemoizedReactFlow>
-            </Profiler>
+        <div className="w-full flex flex-col h-[90vh] bg-slate-50 border border-slate-200 rounded-xl overflow-hidden">
+            {/* Top Navigation Tabs */}
+            <div className="flex items-center gap-2 bg-white px-4 py-3 border-b border-slate-200">
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 mr-2">
+                    Program:
+                </span>
+                {tabOptions.map((code) => {
+                    const isActive = activeProgramId.toUpperCase() === code.toUpperCase();
+                    return (
+                        <button
+                            key={code}
+                            onClick={() => setActiveProgramId(code)}
+                            className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                                isActive
+                                    ? "bg-slate-900 text-white shadow-sm"
+                                    : "bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900"
+                            }`}
+                        >
+                            {code}
+                        </button>
+                    );
+                })}
+            </div>
+
+            {/* Content Area */}
+            <div className="flex-1 w-full relative">
+                {loading && (
+                    <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/75 text-sm font-medium text-slate-500">
+                        Loading dependency graph…
+                    </div>
+                )}
+
+                {error.hasError ? (
+                    <div className="p-6 text-sm text-red-600 bg-red-50 h-full flex flex-col items-center justify-center text-center">
+                        <p className="font-semibold mb-1">Failed to load program graph</p>
+                        <p className="text-xs text-red-500 max-w-md">{error.message}</p>
+                    </div>
+                ) : coursesRef.current.length === 0 && !loading ? (
+                    <div className="p-6 text-sm text-slate-500 h-full flex items-center justify-center">
+                        No courses found for this program.
+                    </div>
+                ) : (
+                    <Profiler
+                        id="CourseFlow"
+                        onRender={(id, phase, dur) => {
+                            if (process.env.NODE_ENV === "development") {
+                                console.log(`${id} ${phase}: ${dur.toFixed(1)}ms`);
+                            }
+                        }}
+                    >
+                        <MemoizedReactFlow
+                            nodes={styledNodes}
+                            edges={styledEdges}
+                            onNodesChange={handleNodesChange}
+                            onEdgesChange={handleEdgesChange}
+                            onNodeClick={onNodeClick}
+                            fitView
+                            minZoom={0.1}
+                            maxZoom={2}
+                        >
+                            <MiniMap />
+                            <Controls />
+                            <Background gap={16} />
+                        </MemoizedReactFlow>
+                    </Profiler>
+                )}
+            </div>
         </div>
     );
 }

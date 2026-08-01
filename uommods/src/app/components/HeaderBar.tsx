@@ -53,6 +53,9 @@ export default function HeaderBar() {
         else if (weekNum <=21 && weekNum <=28){
           setAcademicWeek(`Semester 2 Week ${weekNum-21}`);
         }
+        else{
+          setAcademicWeek(`Summer Break!!`);
+        }
     };
 
     updateDateTime();
@@ -112,7 +115,7 @@ export default function HeaderBar() {
           </Link>
 
           <nav className="hidden md:flex space-x-6 text-sm text-gray-700 font-medium">
-            <Link href="/course-planner" className="hover:text-blue-600">
+            <Link href="/plannerv2" className="hover:text-blue-600">
               Course Planner
             </Link>
             <Link href="/course-list" className="hover:text-blue-600">

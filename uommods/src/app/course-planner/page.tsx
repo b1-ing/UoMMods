@@ -1,5 +1,4 @@
 import HeaderBar from "@/app/components/HeaderBar";
-import Planner from "../components/Planner";
 import { Program } from "@/lib/types";
 import {programs} from "@/lib/programs";
 
@@ -17,7 +16,6 @@ export default async function CoursePlanner() {
       <HeaderBar />
       <div className="max-w-6xl mx-auto p-6 space-y-6">
         <h1 className="text-3xl font-bold">Course Planner</h1>
-        <Planner programs={programMap} />
       </div>
     </div>
   );

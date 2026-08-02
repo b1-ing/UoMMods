@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Menu, X, User, LogOut, Settings, LogIn, AppWindow } from "lucide-react";
+import { Menu, X, User, LogOut, Settings, LogIn } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import GithubStarButton from "./GithubStarButton";
 
@@ -127,13 +127,10 @@ export default function HeaderBar() {
               <Link href="/course-list" className="hover:text-indigo-400 transition-colors">
                 Course List
               </Link>
-              <Link
-                  href="/contribute"
-                  className="flex items-center gap-1.5 hover:text-indigo-400 transition-colors"
-              >
-                <AppWindow size={16} />
-                <span>Contribute</span>
+              <Link href="/dependency-graph" className="hover:text-indigo-400 transition-colors">
+                Dependency Graph
               </Link>
+
             </nav>
 
             <div className="hidden sm:flex items-center gap-6">
@@ -264,13 +261,13 @@ export default function HeaderBar() {
                   Course List
                 </Link>
                 <Link
-                    href="/contribute"
+                    href="/dependency-graph"
                     onClick={() => setSidebarOpen(false)}
-                    className="flex items-center gap-2 py-1.5 hover:text-indigo-400 transition-colors"
+                    className="py-1.5 hover:text-indigo-400 transition-colors"
                 >
-                  <AppWindow size={16} />
-                  <span>Contribute</span>
+                  Dependency Graph
                 </Link>
+
               </nav>
             </div>
 

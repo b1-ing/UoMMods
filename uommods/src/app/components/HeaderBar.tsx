@@ -10,10 +10,16 @@ export default function HeaderBar() {
   const [currentDate, setCurrentDate] = useState("");
   const [currentTime, setCurrentTime] = useState("");
   const [academicWeek, setAcademicWeek] = useState("");
-  const [user, setUser] = useState<
-    { fullname: string; username: string } | undefined
-  >(undefined);
+  const [redirectPath, setRedirectPath] = useState("/");
+  const [user, setUser] = useState<{ fullname: string; username: string } | undefined>(undefined);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+
+  // Set initial redirect path on client mount to avoid hydration mismatch
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setRedirectPath(window.location.pathname);
+    }
+  }, []);
 
   useEffect(() => {
     const updateDateTime = () => {
@@ -36,26 +42,27 @@ export default function HeaderBar() {
       setCurrentDate(date.toLocaleDateString(undefined, dateOptions));
       setCurrentTime(date.toLocaleTimeString(undefined, timeOptions));
 
+      // Term Start Calculation
       const termStart = new Date("2025-09-22");
-      const weekNum =
-        Math.ceil((+date - +termStart) / (7 * 24 * 60 * 60 * 1000)) + 1;
-      console.log(typeof weekNum)
-        if (weekNum <=13){
-          console.log(weekNum <=13)
-          setAcademicWeek(`Semester 1 Week ${weekNum}`);
-        }
-        else if (weekNum<=14 && weekNum<=17){
-          setAcademicWeek(`Winter Break Week ${weekNum-14}`);
-        }
-        else if (weekNum<=18 && weekNum <=20){
-          setAcademicWeek(`Semester 1 Exam Week ${weekNum-18}`);
-        }
-        else if (weekNum <=21 && weekNum <=28){
-          setAcademicWeek(`Semester 2 Week ${weekNum-21}`);
-        }
-        else{
-          setAcademicWeek(`Summer Break!!`);
-        }
+      const weekNum = Math.ceil((+date - +termStart) / (7 * 24 * 60 * 60 * 1000));
+
+      if (weekNum <= 0) {
+        setAcademicWeek("Summer Break");
+      } else if (weekNum <= 12) {
+        setAcademicWeek(`Semester 1 Week ${weekNum}`);
+      } else if (weekNum <= 16) {
+        setAcademicWeek(`Winter Break Week ${weekNum - 12}`);
+      } else if (weekNum <= 19) {
+        setAcademicWeek(`Semester 1 Exam Week ${weekNum - 16}`);
+      } else if (weekNum <= 31) {
+        setAcademicWeek(`Semester 2 Week ${weekNum - 19}`);
+      } else if (weekNum <= 34) {
+        setAcademicWeek(`Easter Break Week ${weekNum - 31}`);
+      } else if (weekNum <= 38) {
+        setAcademicWeek(`Semester 2 Exam Week ${weekNum - 34}`);
+      } else {
+        setAcademicWeek(`Summer Break`);
+      }
     };
 
     updateDateTime();
@@ -66,13 +73,10 @@ export default function HeaderBar() {
   useEffect(() => {
     const fetchSession = async () => {
       try {
-        const res = await fetch("/api/session", {
-          credentials: "include",
-        });
+        const res = await fetch("/api/session", { credentials: "include" });
         if (res.ok) {
           const data = await res.json();
           if (data.auth) {
-            console.log(data);
             setUser({
               fullname: data.user.fullname,
               username: data.user.username,
@@ -92,11 +96,12 @@ export default function HeaderBar() {
   }, [user]);
 
   const initials = useMemo(() => {
+    if (!decodedName) return "";
     return decodedName
-      .split(" ")
-      .map((part) => part[0])
-      .join("")
-      .toUpperCase();
+        .split(" ")
+        .map((part) => part[0])
+        .join("")
+        .toUpperCase();
   }, [decodedName]);
 
   const logout = () => {
@@ -104,184 +109,207 @@ export default function HeaderBar() {
   };
 
   return (
-    <>
-      <header className="sticky top-0 z-50 w-full border-b bg-white/90 backdrop-blur-md shadow-sm">
-        <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-          <Link
-            href="/"
-            className="text-xl font-bold text-black-600 hover:text-blue-600"
-          >
-            UoMMods
-          </Link>
-
-          <nav className="hidden md:flex space-x-6 text-sm text-gray-700 font-medium">
-            <Link href="/plannerv2" className="hover:text-blue-600">
-              Course Planner
+      <>
+        <header className="sticky top-0 z-50 w-full border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-md shadow-xs">
+          <div className="container mx-auto px-4 py-3 flex items-center justify-between">
+            <Link
+                href="/"
+                className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-blue-400 hover:opacity-90 transition-opacity"
+            >
+              UoMMods
             </Link>
-            <Link href="/course-list" className="hover:text-blue-600">
-              Course List
-            </Link>
-            <div className="flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-blue-600">
-              <AppWindow  size={18} />
-              <Link href="/contribute" >
-                Contribute
-              </Link>
-            </div>
-          </nav>
 
-          <div className="hidden sm:flex items-center gap-6">
-            <div className="text-sm text-right text-gray-600">
-              <div>
-                {currentDate} {currentTime}
-              </div>
-              <div className="text-xs text-gray-500">{academicWeek}</div>
-            </div>
-
-            {/* Profile section (desktop) */}
-            <div className="relative">
-              <button
-                className="flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-blue-600"
-                onClick={() => setDropdownOpen(!dropdownOpen)}
-              >
-                {user ? (
-                  <>
-                    <div className="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center text-xs font-bold">
-                      {initials}
-                    </div>
-                    <span>{decodedName}</span>
-                  </>
-                ) : (
-                  <>
-                    <User size={18} />
-                    <span>Log in</span>
-                  </>
-                )}
-              </button>
-              {dropdownOpen && (
-                <div className="absolute right-0 mt-2 w-40 bg-white border rounded shadow-md z-50">
-                  {user ? (
-                    <>
-                      <Link
-                        href="/settings"
-                        className="block px-4 py-2 text-sm hover:bg-gray-100"
-                      >
-                        <Settings className="inline-block w-4 h-4 mr-2" />{" "}
-                        Settings
-                      </Link>
-                      <button
-                        onClick={logout}
-                        className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
-                      >
-                        <LogOut className="inline-block w-4 h-4 mr-2" /> Logout
-                      </button>
-                    </>
-                  ) : (
-                    <Link
-                      href={`/login?redirect=${encodeURIComponent(
-                        window.location.pathname
-                      )}`}
-                      className="block px-4 py-2 text-sm hover:bg-gray-100"
-                    >
-                      <LogIn className="inline-block w-4 h-4 mr-2" /> Login
-                    </Link>
-                  )}
-                </div>
-              )}
-            </div>
-            <GithubStarButton />
-
-          </div>
-
-          {/* Mobile menu button */}
-          <button
-            className="md:hidden text-gray-700"
-            onClick={() => setSidebarOpen(true)}
-          >
-            <Menu size={24} />
-          </button>
-        </div>
-      </header>
-
-      {/* Mobile Sidebar Overlay */}
-      <div
-        className={`fixed inset-0 z-40 bg-black/40 transition-opacity duration-300 ${
-          sidebarOpen ? "opacity-100 visible" : "opacity-0 invisible"
-        }`}
-        onClick={() => setSidebarOpen(false)}
-      />
-
-      {/* Mobile Sidebar */}
-      <aside
-        className={`fixed top-0 right-0 z-50 h-full w-64 bg-white shadow-lg transform transition-transform duration-300 ${
-          sidebarOpen ? "translate-x-0" : "translate-x-full"
-        }`}
-      >
-        <div className="flex flex-col h-full justify-between">
-          <div className="relative h-full">
-            {/* Time section (top) */}
-            <div className="px-4 py-3 border-b text-sm text-gray-700">
-              <div>
-                {currentDate} {currentTime}
-              </div>
-              <div className="text-xs text-gray-500">{academicWeek}</div>
-            </div>
-
-            {/* Nav links */}
-            <div className="flex items-center justify-between p-4 border-b">
-              <h2 className="text-lg font-bold text-blue-600">UoMMods</h2>
-              <button onClick={() => setSidebarOpen(false)}>
-                <X size={24} />
-              </button>
-            </div>
-            <nav className="flex flex-col p-4 space-y-4 text-sm font-medium text-gray-700">
-              <Link
-                href="/course-planner"
-                onClick={() => setSidebarOpen(false)}
-              >
+            {/* Desktop Nav Links */}
+            <nav className="hidden md:flex items-center space-x-6 text-sm text-slate-300 font-medium">
+              <Link href="/plannerv2" className="hover:text-indigo-400 transition-colors">
                 Course Planner
               </Link>
-              <Link href="/course-list" onClick={() => setSidebarOpen(false)}>
+              <Link href="/course-list" className="hover:text-indigo-400 transition-colors">
                 Course List
               </Link>
-              <div className="absolute bottom-2">
-                <GithubStarButton />
-              </div>
+              <Link
+                  href="/contribute"
+                  className="flex items-center gap-1.5 hover:text-indigo-400 transition-colors"
+              >
+                <AppWindow size={16} />
+                <span>Contribute</span>
+              </Link>
             </nav>
-          </div>
 
-          {/* Profile section (bottom) */}
-          <div className="p-4 border-t text-sm">
-            {user ? (
-              <div>
-                <div className="mb-2 text-gray-700 font-semibold">
-                  {decodedName}
+            <div className="hidden sm:flex items-center gap-6">
+              <div className="text-right text-xs">
+                <div className="text-slate-300 font-mono">
+                  {currentDate} {currentTime}
                 </div>
-                <Link
-                  href="/settings"
-                  onClick={() => setSidebarOpen(false)}
-                  className="block py-1 hover:text-blue-600"
-                >
-                  Settings
-                </Link>
+                <div className="text-indigo-400 font-medium">{academicWeek}</div>
+              </div>
+
+              {/* Profile Menu Dropdown */}
+              <div className="relative">
                 <button
-                  onClick={logout}
-                  className="block py-1 text-left text-red-600 hover:text-red-800"
+                    className="flex items-center gap-2 text-sm font-medium text-slate-300 hover:text-white transition-colors"
+                    onClick={() => setDropdownOpen(!dropdownOpen)}
                 >
-                  Logout
+                  {user ? (
+                      <>
+                        <div className="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs font-bold border border-indigo-400/30">
+                          {initials}
+                        </div>
+                        <span className="max-w-[120px] truncate">{decodedName}</span>
+                      </>
+                  ) : (
+                      <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 hover:border-slate-700">
+                        <User size={16} />
+                        <span>Log in</span>
+                      </div>
+                  )}
+                </button>
+
+                {dropdownOpen && (
+                    <div className="absolute right-0 mt-2 w-44 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl z-50 py-1.5 text-slate-300">
+                      {user ? (
+                          <>
+                            <Link
+                                href="/settings"
+                                onClick={() => setDropdownOpen(false)}
+                                className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-slate-800 hover:text-white transition-colors"
+                            >
+                              <Settings className="w-4 h-4 text-slate-400" />
+                              <span>Settings</span>
+                            </Link>
+                            <button
+                                onClick={logout}
+                                className="flex items-center gap-2 w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-slate-800/80 transition-colors"
+                            >
+                              <LogOut className="w-4 h-4" />
+                              <span>Logout</span>
+                            </button>
+                          </>
+                      ) : (
+                          <Link
+                              href={`/login?redirect=${encodeURIComponent(redirectPath)}`}
+                              onClick={() => setDropdownOpen(false)}
+                              className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-slate-800 hover:text-white transition-colors"
+                          >
+                            <LogIn className="w-4 h-4 text-slate-400" />
+                            <span>Login</span>
+                          </Link>
+                      )}
+                    </div>
+                )}
+              </div>
+
+              <GithubStarButton />
+            </div>
+
+            {/* Mobile Menu Trigger */}
+            <button
+                className="md:hidden text-slate-300 hover:text-white p-1"
+                onClick={() => setSidebarOpen(true)}
+                aria-label="Open sidebar menu"
+            >
+              <Menu size={24} />
+            </button>
+          </div>
+        </header>
+
+        {/* Mobile Sidebar Overlay */}
+        <div
+            className={`fixed inset-0 z-50 bg-black/60 backdrop-blur-xs transition-opacity duration-300 ${
+                sidebarOpen ? "opacity-100 visible" : "opacity-0 invisible pointer-events-none"
+            }`}
+            onClick={() => setSidebarOpen(false)}
+        />
+
+        {/* Mobile Sidebar */}
+        <aside
+            className={`fixed top-0 right-0 z-50 h-full w-72 bg-slate-950 border-l border-slate-800 shadow-2xl transform transition-transform duration-300 ease-in-out ${
+                sidebarOpen ? "translate-x-0" : "translate-x-full"
+            }`}
+        >
+          <div className="flex flex-col h-full justify-between">
+            <div>
+              <div className="flex items-center justify-between p-4 border-b border-slate-800">
+                <span className="text-lg font-bold text-indigo-400">UoMMods</span>
+                <button
+                    onClick={() => setSidebarOpen(false)}
+                    className="p-1 text-slate-400 hover:text-white"
+                >
+                  <X size={20} />
                 </button>
               </div>
-            ) : (
-              <Link
-                href="/login"
-                onClick={() => setSidebarOpen(false)}
-                className="text-blue-600 hover:underline"
-              >
-                Log in
-              </Link>
-            )}
+
+              {/* Academic Clock Banner in Drawer */}
+              <div className="px-4 py-3 border-b border-slate-900 bg-slate-900/40 text-xs">
+                <div className="text-slate-300 font-mono">
+                  {currentDate} {currentTime}
+                </div>
+                <div className="text-indigo-400 font-medium mt-0.5">{academicWeek}</div>
+              </div>
+
+              {/* Navigation Links */}
+              <nav className="flex flex-col p-4 space-y-3 text-sm font-medium text-slate-300">
+                <Link
+                    href="/plannerv2"
+                    onClick={() => setSidebarOpen(false)}
+                    className="py-1.5 hover:text-indigo-400 transition-colors"
+                >
+                  Course Planner
+                </Link>
+                <Link
+                    href="/course-list"
+                    onClick={() => setSidebarOpen(false)}
+                    className="py-1.5 hover:text-indigo-400 transition-colors"
+                >
+                  Course List
+                </Link>
+                <Link
+                    href="/contribute"
+                    onClick={() => setSidebarOpen(false)}
+                    className="flex items-center gap-2 py-1.5 hover:text-indigo-400 transition-colors"
+                >
+                  <AppWindow size={16} />
+                  <span>Contribute</span>
+                </Link>
+              </nav>
+            </div>
+
+            {/* User Profile & GitHub CTA Section */}
+            <div className="p-4 border-t border-slate-800 bg-slate-900/50 space-y-4">
+              <GithubStarButton />
+
+              {user ? (
+                  <div className="pt-2 border-t border-slate-800/60">
+                    <div className="text-sm text-slate-200 font-semibold truncate mb-2">
+                      {decodedName}
+                    </div>
+                    <Link
+                        href="/settings"
+                        onClick={() => setSidebarOpen(false)}
+                        className="block py-1 text-xs text-slate-400 hover:text-white transition-colors"
+                    >
+                      Settings
+                    </Link>
+                    <button
+                        onClick={logout}
+                        className="block py-1 text-xs text-red-400 hover:text-red-300 transition-colors"
+                    >
+                      Logout
+                    </button>
+                  </div>
+              ) : (
+                  <Link
+                      href={`/login?redirect=${encodeURIComponent(redirectPath)}`}
+                      onClick={() => setSidebarOpen(false)}
+                      className="flex items-center justify-center gap-2 w-full py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition-colors"
+                  >
+                    <LogIn size={14} />
+                    <span>Log in</span>
+                  </Link>
+              )}
+            </div>
           </div>
-        </div>
-      </aside>
-    </>
+        </aside>
+      </>
   );
 }

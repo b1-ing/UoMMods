@@ -73,6 +73,18 @@ function CreditRing({ current, target, color }: { current: number; target: numbe
         </div>
     );
 }
+function parsePrereqs(raw: unknown): string[] {
+    if (!raw) return [];
+    if (Array.isArray(raw)) return raw.map(String).filter(Boolean);
+    if (typeof raw === 'string') {
+        return raw
+            .replace(/[{}]/g, '')
+            .split(',')
+            .map((s) => s.trim().replace(/^"|"$/g, ''))
+            .filter(Boolean);
+    }
+    return [];
+}
 
 // ── Course Card ───────────────────────────────────────────────────────────────
 function CourseCard({
@@ -82,7 +94,26 @@ function CourseCard({
     allColumns: Record<Year, Record<string, Course[]>>;
 }) {
     const { color } = COLUMN_THEME[type];
-    const missing = (course.prerequisites_list ?? []).filter(
+
+    // Safely parse prerequisites into a string array regardless of DB format
+    const prereqsArray: string[] = useMemo(() => {
+        const raw: string | string[] | null | undefined =
+            course.prerequisites_list;
+        if (!raw) return [];
+        if (Array.isArray(raw)) return raw;
+        if (typeof raw === "string") {
+            const rawStr: string = raw;
+            // Handles Postgres array syntax "{COMP10120,COMP10220}" or CSV "COMP10120, COMP10220"
+            return rawStr
+                .replace(/[{}]/g, '')
+                .split(',')
+                .map((s) => s.trim())
+                .filter(Boolean);
+        }
+        return [];
+    }, [course.prerequisites_list]);
+
+    const missing = prereqsArray.filter(
         (code) => !([1, 2, 3] as Year[]).some((yr) =>
             Object.values(allColumns[yr] ?? {}).flat().some((c) => c?.code === code),
         ),
@@ -93,12 +124,12 @@ function CourseCard({
             <div className="group relative flex items-start gap-2 pl-3.5 pr-2 py-2.5 rounded-xl bg-white border border-slate-100 hover:border-slate-300 hover:shadow-md transition-all cursor-pointer">
                 <div
                     className="absolute left-0 top-2 bottom-2 w-[3px] rounded-full"
-                    style={{ backgroundColor: course.mandatory ? color : `${color}55` }}
+                    style={{ backgroundColor: course.mandatory === "Mandatory"? color : `${color}55` }}
                 />
                 <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="text-[10px] font-mono font-bold text-slate-400 tracking-wide">{course.code}</span>
-                        {course.mandatory && (
+                        {course.mandatory === "Mandatory" && (
                             <span
                                 className="text-[9px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded-full"
                                 style={{ backgroundColor: `${color}18`, color }}
@@ -126,7 +157,7 @@ function CourseCard({
                         )}
                     </div>
                 </div>
-                {!course.mandatory && onRemove && (
+                {course.mandatory === "Optional" && onRemove && (
                     <button
                         onClick={(e) => { e.preventDefault(); e.stopPropagation(); onRemove(); }}
                         className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity p-2 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-400 flex-shrink-0 self-start -mr-1 -mt-1"
@@ -217,10 +248,25 @@ function CourseSearchPanel({
     const inputRef = useRef<HTMLInputElement>(null);
 
     const completedCodes = useMemo(() => getCompletedCourseCodes(columns, false, selectedYear), [columns, selectedYear]);
+    // Helper to safely parse prerequisites into a string array regardless of DB format
+    function parsePrereqs(raw: unknown): string[] {
+        if (!raw) return [];
+        if (Array.isArray(raw)) return raw.filter(Boolean);
+        if (typeof raw === "string") {
+            return raw
+                .replace(/[{}]/g, "")
+                .split(",")
+                .map((s) => s.trim())
+                .filter(Boolean);
+        }
+        return [];
+    }
+
 
     const processedCourses = useMemo(() => {
         return courses.map((c) => {
-            const prereqs = c.prerequisites_list ?? [];
+            // Safely parse prerequisites using the helper
+            const prereqs = parsePrereqs(c.prerequisites_list);
             const missing = prereqs.filter((code) => !completedCodes.has(code));
             return { course: c, isUnlocked: missing.length === 0, missingPrereqs: missing };
         });
@@ -330,7 +376,7 @@ function CourseSearchPanel({
                                             </span>
                                         )}
 
-                                        {course.mandatory && (
+                                        {course.mandatory === "Mandatory" && (
                                             <span className="text-[9px] bg-violet-100 text-violet-600 px-1.5 py-0.5 rounded-full font-semibold uppercase tracking-wide">
                                                 Req
                                             </span>
@@ -375,7 +421,8 @@ function PrereqStatusDrawer({
     const locked: { course: Course; missing: string[] }[] = [];
 
     yearCourses.forEach((c) => {
-        const prereqs = c.prerequisites_list ?? [];
+        // Safely parse prerequisites here too
+        const prereqs = parsePrereqs(c.prerequisites_list);
         const missing = prereqs.filter((code) => !completedCodes.has(code));
         if (missing.length === 0) {
             unlocked.push(c);
@@ -608,12 +655,25 @@ export default function PlannerV2({ programs }: { programs: Record<string, Progr
         if (!searchTarget) return [];
 
         const yearCols = columns[selectedYear] ?? {};
-        const placed = new Set(SEMESTERS.flatMap((s) => (yearCols[s] ?? []).map((c) => c?.code)));
+        // Get all course codes already placed in the current year
+        const placed = new Set(SEMESTERS.flatMap((s) => (yearCols[s] ?? []).map((c) => c?.code)).filter(Boolean));
 
         return Object.values(courses).filter((c) => {
+            if (!c) return false;
+
+            // 1. Must not already be placed in this year
             const isNotPlaced = !placed.has(c.code);
-            const isCorrectYear = c.level === selectedYear;
-            const isCorrectSemester = (c.semester || "").toLowerCase() === searchTarget.toLowerCase();
+
+            // 2. Level must match current year (handles numeric vs string coercion)
+            const isCorrectYear = Number(c.level) === Number(selectedYear);
+
+            // 3. Match database 'semester' column value
+            const courseSem = (c.semester || "").trim().toLowerCase();
+            const targetSem = searchTarget.trim().toLowerCase();
+
+            // Direct match OR allow 'Full year' modules to show under specific semester searches
+            const isCorrectSemester =
+                courseSem === targetSem || courseSem === "full year";
 
             return isNotPlaced && isCorrectYear && isCorrectSemester;
         });

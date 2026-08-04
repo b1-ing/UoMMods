@@ -1,6 +1,7 @@
 import { Course } from './types';
 
-const BASE = process.env.APP_HOME_URL
+// If process.env.APP_HOME_URL is undefined on the client, fall back to ""
+const BASE = process.env.NEXT_PUBLIC_APP_HOME_URL || process.env.APP_HOME_URL || "";
 
 export class ApiError extends Error {
     constructor(public status: number, message: string) {

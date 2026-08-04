@@ -3,6 +3,26 @@ import { Course, Program } from '@/lib/types';
 import { fetchCoursesByProgram } from '@/lib/api';
 import { courses as staticCourses } from '@/lib/courses';
 
+// Helper: Safely parse database array representations into string arrays
+function parseList(raw: unknown): string[] {
+    if (!raw) return [];
+    if (Array.isArray(raw)) return raw.filter(Boolean);
+    if (typeof raw === 'string') {
+        try {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) return parsed.filter(Boolean);
+        } catch {
+            // Fallback for Postgres array syntax e.g. "{COMP10120,COMP10220}" or comma-separated strings
+            return raw
+                .replace(/[{}]/g, '')
+                .split(',')
+                .map((s) => s.trim().replace(/^"|"$/g, ''))
+                .filter(Boolean);
+        }
+    }
+    return [];
+}
+
 function staticCourseMap(programCode: string): Record<string, Course> {
     const map: Record<string, Course> = {};
     for (const c of staticCourses) {
@@ -13,7 +33,11 @@ function staticCourseMap(programCode: string): Record<string, Course> {
 
 export type Year = 1 | 2 | 3;
 
-type Columns = Record<Year, Record<string, Course[]>>;
+export type Columns = Record<Year, Record<string, Course[]>>;
+
+// LocalStorage shape: Year -> Semester -> Array of stored course representations
+type StoredCourse = { code: string; mandatory?: boolean };
+type StoredColumns = Record<Year, Record<string, StoredCourse[]>>;
 
 const SEMESTERS = ['Full year', 'Semester 1', 'Semester 2'] as const;
 
@@ -35,7 +59,49 @@ function loadJson<T>(key: string, fallback: T): T {
 }
 
 function courseExistsInYear(year: Year, code: string, cols: Columns): boolean {
-    return Object.values(cols[year]).some((col) => col.some((c) => c?.code === code));
+    return Object.values(cols[year] ?? {}).some((col) => col.some((c) => c?.code === code));
+}
+
+// Convert runtime columns state to code-only structure for localStorage
+function serializeColumns(cols: Columns): StoredColumns {
+    const result: StoredColumns = { 1: {}, 2: {}, 3: {} };
+    ([1, 2, 3] as Year[]).forEach((yr) => {
+        SEMESTERS.forEach((sem) => {
+            result[yr][sem] = (cols[yr]?.[sem] ?? []).map((c) => ({
+                code: c.code,
+                mandatory: Boolean(c.mandatory),
+            }));
+        });
+    });
+    return result;
+}
+
+// Hydrate stored course codes with fresh course metadata from Supabase/static state
+function hydrateColumns(
+    stored: StoredColumns | null,
+    coursesMap: Record<string, Course>
+): Columns {
+    const result = defaultColumns();
+    if (!stored) return result;
+
+    ([1, 2, 3] as Year[]).forEach((yr) => {
+        SEMESTERS.forEach((sem) => {
+            const list = stored[yr]?.[sem] ?? [];
+            result[yr][sem] = list
+                .map((item) => {
+                    const found = coursesMap[item.code];
+                    if (!found) return null;
+                    return {
+                        ...found,
+                        credits: Number(found.credits) || 0, // Guarantees numeric credits
+                        mandatory: item.mandatory ?? found.mandatory,
+                    };
+                })
+                .filter(Boolean) as Course[];
+        });
+    });
+
+    return result;
 }
 
 export interface PlannerState {
@@ -75,6 +141,61 @@ export interface YearSummary {
     columns: { column: string; courses: Course[]; totalCredits: number }[];
 }
 
+
+function isMandatory(course: Course): boolean {
+    return course.mandatory === "Mandatory";
+}
+function codes(
+    courses: Course[],
+    level: number,
+    semester: (typeof SEMESTERS)[number],
+    mandatory: boolean
+): string[] {
+    return courses
+        .filter((course) => {
+            return (
+                Number(course.level) === level &&
+                course.semester === semester &&
+                isMandatory(course) === mandatory
+            );
+        })
+        .map((course) => course.code)
+        .sort();
+}
+
+export function buildProgramFromCourses(
+    programId: string,
+    courses: Course[]
+): Program {
+    return {
+        program_id: programId,
+
+        firstyrfy: codes(courses, 1, "Full year", true),
+        firstyrs1comp: codes(courses, 1, "Semester 1", true),
+        firstyrs2comp: codes(courses, 1, "Semester 2", true),
+
+        secondyrfy: codes(courses, 2, "Full year", true),
+        secondyrs1comp: codes(courses, 2, "Semester 1", true),
+        secondyrs2comp: codes(courses, 2, "Semester 2", true),
+
+        thirdyrfy: codes(courses, 3, "Full year", true),
+        thirdyrs1comp: codes(courses, 3, "Semester 1", true),
+        thirdyrs2comp: codes(courses, 3, "Semester 2", true),
+
+        firstyrfyop: codes(courses, 1, "Full year", false),
+        firstyrs1op: codes(courses, 1, "Semester 1", false),
+        firstyrs2op: codes(courses, 1, "Semester 2", false),
+
+        secondyrfyop: codes(courses, 2, "Full year", false),
+        secondyrs1op: codes(courses, 2, "Semester 1", false),
+        secondyrs2op: codes(courses, 2, "Semester 2", false),
+
+        thirdyrfyop: codes(courses, 3, "Full year", false),
+        thirdyrs1op: codes(courses, 3, "Semester 1", false),
+        thirdyrs2op: codes(courses, 3, "Semester 2", false)
+    } as unknown as Program;
+}
+
 export function usePlanner(programs: Record<string, Program>): PlannerState {
     const [ready, setReady] = useState(false);
 
@@ -82,8 +203,8 @@ export function usePlanner(programs: Record<string, Program>): PlannerState {
     const [isLoadingCourses, setIsLoadingCourses] = useState(false);
 
     const [columns, setColumns] = useState<Columns>(defaultColumns);
-    const [programSelections, setProgramSelections] = useState<Record<string, Columns>>({});
-    const [prevProgramCode, setPrevProgramCode] = useState('');
+    const [storedSelections, setStoredSelections] = useState<Record<string, StoredColumns>>({});
+    const [currentProgram, setCurrentProgram] = useState<Program | null>(null);
 
     const [selectedYear, setSelectedYear] = useState<Year>(1);
     const [selectedProgramCode, setSelectedProgramCode] = useState('');
@@ -96,120 +217,138 @@ export function usePlanner(programs: Record<string, Program>): PlannerState {
     const [pendingColumn, setPendingColumn] = useState('Full year');
     const [missingPrereqs, setMissingPrereqs] = useState<Course[]>([]);
 
-    // ── Restore preferences from localStorage on mount ──────────────────────
+    // ── 1. Load preferences and stored selections on mount ───────────────────
     useEffect(() => {
         setSelectedYear((loadJson<number>('selectedYear', 1) as Year) || 1);
         setSelectedProgramCode(localStorage.getItem('selectedProgramCode') ?? '');
-        setColumns(loadJson<Columns>('columns', defaultColumns()));
-        setProgramSelections(loadJson('programSelections', {}));
+        setStoredSelections(loadJson<Record<string, StoredColumns>>('programSelections', {}));
         setReady(true);
     }, []);
 
-    // ── Persist preferences whenever they change ─────────────────────────────
+    // ── 2. Persist basic state changes ────────────────────────────────────────
     useEffect(() => {
         if (!ready) return;
         localStorage.setItem('selectedYear', String(selectedYear));
         localStorage.setItem('selectedProgramCode', selectedProgramCode);
-        localStorage.setItem('columns', JSON.stringify(columns));
-        localStorage.setItem('programSelections', JSON.stringify(programSelections));
-    }, [ready, selectedYear, selectedProgramCode, columns, programSelections]);
+        localStorage.setItem('programSelections', JSON.stringify(storedSelections));
+    }, [ready, selectedYear, selectedProgramCode, storedSelections]);
 
-    // ── Keep programSelections in sync when columns change ───────────────────
-    useEffect(() => {
-        if (!ready || !selectedProgramCode) return;
-        setProgramSelections((prev) => ({
-            ...prev,
-            [selectedProgramCode]: JSON.parse(JSON.stringify(columns)),
-        }));
-    }, [columns, selectedProgramCode, ready]);
-
-    // ── Fetch courses whenever the selected program changes ───────────────────
+    // ── 3. Fetch fresh courses when program selection changes ────────────────
     useEffect(() => {
         if (!selectedProgramCode) return;
         setIsLoadingCourses(true);
+
         fetchCoursesByProgram(selectedProgramCode)
             .then((map) => {
-                // Fall back to bundled static data if DB hasn't been populated yet
-                if (Object.keys(map).length === 0) {
-                    setCourses(staticCourseMap(selectedProgramCode));
-                } else {
-                    setCourses(map);
-                }
+                setCourses(map);
+
+                const program = buildProgramFromCourses(
+                    selectedProgramCode,
+                    Object.values(map)
+                );
+
+                // instead of reading from props,
+                // store this in local state
+                setCurrentProgram(program);
             })
             .catch(() => {
-                // API unavailable — use static data so the planner still works
                 setCourses(staticCourseMap(selectedProgramCode));
             })
             .finally(() => setIsLoadingCourses(false));
     }, [selectedProgramCode]);
 
-    // ── Handle program switching: save/restore per-program column state ───────
+    // ── 4. Hydrate columns from stored course codes when courses/program ready
     useEffect(() => {
-        if (!ready || !selectedProgramCode) return;
+        if (!ready || !selectedProgramCode || Object.keys(courses).length === 0) return;
 
-        if (prevProgramCode && prevProgramCode !== selectedProgramCode) {
-            setProgramSelections((prev) => ({
-                ...prev,
-                [prevProgramCode]: columns,
-            }));
-        }
-
-        const saved = programSelections[selectedProgramCode];
-        if (saved) {
-            setColumns(saved);
+        const stored = storedSelections[selectedProgramCode];
+        if (stored) {
+            setColumns(hydrateColumns(stored, courses));
         } else {
             setColumns(defaultColumns());
         }
-        setPrevProgramCode(selectedProgramCode);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectedProgramCode, ready]);
+    }, [selectedProgramCode, courses, ready]);
 
-    // ── Auto-populate compulsory units when program/year/courses first load ───
+    // ── 5. Auto-populate compulsory courses if columns are empty ─────────────
     useEffect(() => {
         if (!selectedProgramCode || !selectedYear || Object.keys(courses).length === 0) return;
 
-        const program = programs[selectedProgramCode];
+        const program = currentProgram;
         if (!program) return;
 
-        const resolve = (codes: string[] | undefined): Course[] =>
-            (codes ?? [])
-                .map((c) => (courses[c] ? { ...courses[c], mandatory: true } : null))
+        const resolve = (rawCodes: unknown): Course[] =>
+            parseList(rawCodes)
+                .map((c) => {
+                    const found = courses[c];
+                    if (!found) return null;
+                    return {
+                        ...found,
+                        credits: Number(found.credits) || 0,
+                        mandatory: "Mandatory",
+                    };
+                })
                 .filter(Boolean) as Course[];
-
         const compulsory: Record<string, Course[]> = {
             'Full year': resolve(
-                selectedYear === 1 ? program.firstyrfy
-                    : selectedYear === 2 ? program.secondyrfy
+                selectedYear === 1
+                    ? program.firstyrfy
+                    : selectedYear === 2
+                        ? program.secondyrfy
                         : program.thirdyrfy,
             ),
             'Semester 1': resolve(
-                selectedYear === 1 ? program.firstyrs1comp
-                    : selectedYear === 2 ? program.secondyrs1comp
+                selectedYear === 1
+                    ? program.firstyrs1comp
+                    : selectedYear === 2
+                        ? program.secondyrs1comp
                         : program.thirdyrs1comp,
             ),
             'Semester 2': resolve(
-                selectedYear === 1 ? program.firstyrs2comp
-                    : selectedYear === 2 ? program.secondyrs2comp
+                selectedYear === 1
+                    ? program.firstyrs2comp
+                    : selectedYear === 2
+                        ? program.secondyrs2comp
                         : program.thirdyrs2comp,
             ),
         };
 
         setColumns((prev) => {
             const yearCols = prev[selectedYear];
-            const alreadyHasEntries = SEMESTERS.some((s) => yearCols?.[s]?.length > 0);
+            const alreadyHasEntries = SEMESTERS.some((s) => (yearCols?.[s]?.length ?? 0) > 0);
 
-            // If columns already have courses, return unchanged state
             if (alreadyHasEntries) return prev;
 
-            return { ...prev, [selectedYear]: compulsory };
+            const updated = { ...prev, [selectedYear]: compulsory };
+
+            // Immediately sync updated compulsory columns to stored selections
+            setStoredSelections((sPrev) => ({
+                ...sPrev,
+                [selectedProgramCode]: serializeColumns(updated),
+            }));
+
+            return updated;
         });
     }, [selectedProgramCode, selectedYear, courses, programs]);
 
+    // ── Helper to mutate columns state and keep storedSelections in sync ─────
+    const updateColumnsAndStore = (fn: (prev: Columns) => Columns) => {
+        setColumns((prev) => {
+            const next = fn(prev);
+            if (selectedProgramCode) {
+                setStoredSelections((sPrev) => ({
+                    ...sPrev,
+                    [selectedProgramCode]: serializeColumns(next),
+                }));
+            }
+            return next;
+        });
+    };
+
     // ── Column mutations ──────────────────────────────────────────────────────
     const updateColumn = (year: Year, column: string, course: Course) => {
-        setColumns((prev) => ({
+        updateColumnsAndStore((prev) => ({
             ...prev,
-            [year]: { ...prev[year], [column]: [...prev[year][column], course] },
+            [year]: { ...prev[year], [column]: [...(prev[year]?.[column] ?? []), course] },
         }));
     };
 
@@ -220,7 +359,9 @@ export function usePlanner(programs: Record<string, Program>): PlannerState {
             return;
         }
 
-        const missing = (course.corequisites_list ?? [])
+        // Safely parse corequisites list before filtering
+        const coreqs = parseList(course.corequisites_list);
+        const missing = coreqs
             .filter((code) => !courseExistsInYear(year, code, columns))
             .map((code) => courses[code])
             .filter(Boolean) as Course[];
@@ -238,11 +379,11 @@ export function usePlanner(programs: Record<string, Program>): PlannerState {
     };
 
     const removeCourseFromColumn = (course: Course, column: string) => {
-        setColumns((prev) => ({
+        updateColumnsAndStore((prev) => ({
             ...prev,
             [selectedYear]: {
                 ...prev[selectedYear],
-                [column]: prev[selectedYear][column].filter((c) => c.code !== course.code),
+                [column]: (prev[selectedYear]?.[column] ?? []).filter((c) => c.code !== course.code),
             },
         }));
         setOpenDrawer(null);
@@ -279,33 +420,46 @@ export function usePlanner(programs: Record<string, Program>): PlannerState {
     const clearAll = () => {
         const empty = defaultColumns();
         setColumns(empty);
-        setProgramSelections({});
-        localStorage.setItem('columns', JSON.stringify(empty));
+        setStoredSelections({});
+        localStorage.removeItem('columns');
         localStorage.setItem('programSelections', JSON.stringify({}));
     };
 
     // ── Optional courses for the drawer ──────────────────────────────────────
     const getOptionalCourses = (semester: string): Course[] => {
         if (!selectedProgramCode || !selectedYear) return [];
-        const program = programs[selectedProgramCode];
+        const program = currentProgram;
         if (!program) return [];
 
-        const optMap: Record<Year, Record<string, string[]>> = {
-            1: { 'Full year': [], 'Semester 1': program.firstyrs1op ?? [], 'Semester 2': program.firstyrs2op ?? [] },
-            2: { 'Full year': [], 'Semester 1': program.secondyrs1op ?? [], 'Semester 2': program.secondyrs2op ?? [] },
-            3: { 'Full year': [], 'Semester 1': program.thirdyrs1op ?? [], 'Semester 2': program.thirdyrs2op ?? [] },
+        const optMap: Record<Year, Record<string, unknown>> = {
+            1: {
+                'Semester 1': program.firstyrs1op,
+                'Semester 2': program.firstyrs2op,
+            },
+            2: {
+                'Semester 1': program.secondyrs1op ,
+                'Semester 2': program.secondyrs2op ,
+            },
+            3: {
+                'Semester 1': program.thirdyrs1op  ,
+                'Semester 2': program.thirdyrs2op ,
+            },
         };
 
-        const allowed = new Set(optMap[selectedYear]?.[semester] ?? []);
+        const rawAllowed = optMap[selectedYear]?.[semester];
+        const allowed = new Set(parseList(rawAllowed));
         if (allowed.size === 0) return [];
 
         const yearCols = columns[selectedYear] ?? emptyYear();
         const alreadyAdded = new Set(
-            SEMESTERS.flatMap((s) => (yearCols[s] ?? []).map((c) => c.code)),
+            SEMESTERS.flatMap((s) => (yearCols[s] ?? []).map((c) => c?.code)).filter(Boolean),
         );
 
         return Object.values(courses).filter(
-            (c) => allowed.has(c.code) && c.level === selectedYear && !alreadyAdded.has(c.code),
+            (c) =>
+                allowed.has(c.code) &&
+                Number(c.level) === Number(selectedYear) &&
+                !alreadyAdded.has(c.code),
         );
     };
 
@@ -321,7 +475,7 @@ export function usePlanner(programs: Record<string, Program>): PlannerState {
                     return {
                         column: col,
                         courses: list.filter(Boolean),
-                        totalCredits: list.reduce((s, c) => s + (c?.credits ?? 0), 0),
+                        totalCredits: list.reduce((s, c) => s + (Number(c?.credits) || 0), 0),
                     };
                 }),
             };

@@ -8,7 +8,7 @@ export type Course = {
     code: string;
     title: string;
     credits: number;
-    mandatory?: boolean;
+    mandatory?: string;
     description?: string;
     semester: string;
     level: number;

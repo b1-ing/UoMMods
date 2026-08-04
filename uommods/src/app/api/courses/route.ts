@@ -1,79 +1,116 @@
 import { supabase } from "@/lib/supabase";
-import { revalidatePath, unstable_cache } from "next/cache";
-import { NextRequest } from "next/server";
+import { revalidateTag } from "next/cache";
+import { NextRequest, NextResponse } from "next/server";
 
-const DEBUG = false;
+const DEBUG = process.env.NODE_ENV === "development";
 
-const queryCourseByCode = async (courseCode: string) => {
+/* ---------------- QUERY HELPERS ---------------- */
+
+const fetchCourseByCode = async (courseCode: string) => {
+  const cleanCode = courseCode.trim().toUpperCase();
   if (DEBUG) {
-    console.log("CACHE DEBUG:", "Supabase hit for course by code");
+    console.log("[DB] Fetching single course from 'courses':", cleanCode);
   }
-  return await supabase
-    .from("courses")
-    .select("*")
-    .eq("code", courseCode)
-    .single();
+
+  const { data, error } = await supabase
+      .from("courses")
+      .select("*")
+      .eq("code", cleanCode)
+      .single();
+
+  if (error) {
+    // Throwing ensures unstable_cache does NOT store database errors
+    throw new Error(`[Supabase Error]: ${error.message}`);
+  }
+
+  return data;
 };
 
-const queryCourses = async (programCode: string) => {
+const fetchCoursesByProgram = async (programCode: string) => {
+  const cleanCode = programCode.trim().toUpperCase();
+  const tableName = `${cleanCode}_courses`;
+
   if (DEBUG) {
-    console.log("CACHE DEBUG:", "Supabase hit for all courses");
+    console.log(`[DB] Fetching program courses from table: "${tableName}"`);
   }
-  return await supabase
-    .from("course_programs")
-    .select(
-      `
-            course_code,
-            courses (
-            *)`
-    )
-    .eq("program_id", programCode);
+
+  // 1. Try dedicated program table
+  const { data: tableData, error: tableError } = await supabase
+      .from(tableName)
+      .select("*");
+
+  if (!tableError && tableData && tableData.length > 0) {
+    return tableData;
+  }
+
+  // 2. Fall back to master 'courses' table if dedicated table missing/empty
+  const { data: generalData, error: generalError } = await supabase
+      .from("courses")
+      .select("*")
+      .contains("program_id", [cleanCode]);
+
+  if (generalError) {
+    throw new Error(`[Supabase Fallback Error]: ${generalError.message}`);
+  }
+
+  return generalData ?? [];
 };
+
+/* ---------------- CACHED FUNCTIONS (TOP LEVEL) ---------------- */
+
+// Declared at top level with static key identifiers + tags
+// const getCachedCourseByCode = (code: string) =>
+//     unstable_cache(
+//         async () => fetchCourseByCode(code),
+//         ["single-course-by-code", code.trim().toUpperCase()],
+//         { tags: ["courses", `course-${code.trim().toUpperCase()}`] }
+//     )();
+//
+// const getCachedCoursesByProgram = (programCode: string) =>
+//     unstable_cache(
+//         async () => fetchCoursesByProgram(programCode),
+//         ["program-courses-by-code", programCode.trim().toUpperCase()],
+//         { tags: ["courses", `program-${programCode.trim().toUpperCase()}`] }
+//     )();
+
+/* ---------------- ROUTE HANDLERS ---------------- */
+
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const programCode = searchParams.get("programCode");
   const courseCode = searchParams.get("courseCode");
-  if (!!courseCode) {
-    const getCourseByCode = unstable_cache(queryCourseByCode, [courseCode]);
-    const { data, error } = await getCourseByCode(courseCode);
-    if (error) {
-      return new Response(JSON.stringify(error), {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-    return new Response(JSON.stringify(data), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
-  if (!!programCode) {
-    const getCourses = unstable_cache(queryCourses, [programCode]);
-    const { data, error } = await getCourses(programCode);
-    if (error) {
-      return new Response(JSON.stringify(error), {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-    return new Response(JSON.stringify(data), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
 
-  return new Response("Bad request: no program or course code provided", {
-    status: 400,
-  });
+  try {
+    // 1. Fetch Single Course Card Data
+    if (courseCode) {
+      const course = await fetchCourseByCode(courseCode);
+      return NextResponse.json(course, { status: 200 });
+    }
+
+    // 2. Fetch All Courses for Program Flow
+    if (programCode) {
+      const courses = await fetchCoursesByProgram(programCode);
+      return NextResponse.json(courses, { status: 200 });
+    }
+
+    return new Response("Bad request: no program or course code provided", {
+      status: 400,
+    });
+  } catch (err: unknown) {
+    console.error("[API /api/courses] Query Error:", err);
+    return NextResponse.json(
+        { error: err instanceof Error ? err.message : "Failed to fetch course data" },
+        { status: 500 }
+    );
+  }
 }
 
-// When the database is updated, by the scraper for example, this invalidates
-// the cache so clients get up-to-date information
-
 export async function PUT() {
-  revalidatePath("/api/courses");
-  return new Response(
-    JSON.stringify({ message: "Cache invalidated for all courses" }),
-    { status: 200 }
+  // Properly purges all data cached via unstable_cache using tag 'courses'
+  revalidateTag("courses");
+
+  return NextResponse.json(
+      { message: "Cache successfully invalidated for all courses" },
+      { status: 200 }
   );
 }

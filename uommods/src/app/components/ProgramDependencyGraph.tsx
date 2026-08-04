@@ -14,7 +14,6 @@ import ReactFlow, {
     Controls,
     MiniMap,
     MarkerType,
-    Position,
     useEdgesState,
     useNodesState,
     type Edge,
@@ -26,8 +25,7 @@ import ReactFlow, {
 
 import "reactflow/dist/style.css";
 
-import { programs } from "@/lib/programs";
-import { courses } from "@/lib/courses";
+import { supabase } from "@/lib/supabase";
 import { performanceMonitor } from "@/lib/utils";
 import { Course } from "@/lib/types";
 
@@ -61,16 +59,26 @@ function buildDependencyEdges(
 ): Edge[] {
     const edges: Edge[] = [];
 
+    const normalizeList = (list: string[] | string | null | undefined): string[] => {
+        if (!list) return [];
+        if (Array.isArray(list)) return list;
+        if (typeof list === "string") {
+            return list.split(",").map((s) => s.trim()).filter(Boolean);
+        }
+        return [];
+    };
+
     courses.forEach((course) => {
-        const prereqs = course.prerequisites_list ?? [];
-        const coreqs = course.corequisites_list ?? [];
+        const targetCode = String(course.code).trim();
+        const prereqs = normalizeList(course.prerequisites_list);
+        const coreqs = normalizeList(course.corequisites_list);
 
         prereqs.forEach((src) => {
             if (nodePositions[src]) {
                 edges.push({
-                    id: `pre-${src}-${course.code}`,
+                    id: `pre-${src}-${targetCode}`,
                     source: src,
-                    target: course.code,
+                    target: targetCode,
                     animated: true,
                     style: { stroke: "#0077cc", strokeWidth: 2 },
                     markerEnd: { type: MarkerType.ArrowClosed },
@@ -81,9 +89,9 @@ function buildDependencyEdges(
         coreqs.forEach((src) => {
             if (nodePositions[src]) {
                 edges.push({
-                    id: `co-${src}-${course.code}`,
+                    id: `co-${src}-${targetCode}`,
                     source: src,
-                    target: course.code,
+                    target: targetCode,
                     animated: true,
                     style: {
                         stroke: "#00aa55",
@@ -142,7 +150,23 @@ export default function CourseFlow({ program_id: initialProgramId = "G400", sele
     const calculateLayout = useCallback((list: Course[], progId: string): LayoutResult => {
         performanceMonitor.startTiming("layout");
 
-        const key = `${progId}-${list.map((c) => c.code).join(",")}`;
+        // Deduplicate courses by code to prevent key collisions
+        const uniqueCoursesMap = new Map<string, Course>();
+        list.forEach((course) => {
+            if (course && course.code) {
+                uniqueCoursesMap.set(String(course.code).trim(), course);
+            }
+        });
+        console.table(
+            list.map(c => ({
+                code: c.code,
+                title: c.title,
+                level: c.level,
+            }))
+        );
+        const uniqueCourses = Array.from(uniqueCoursesMap.values());
+
+        const key = `${progId}-${uniqueCourses.map((c) => c.code).join(",")}`;
         const cached = layoutCache.get(key);
         if (cached) {
             performanceMonitor.endTiming("layout");
@@ -150,11 +174,12 @@ export default function CourseFlow({ program_id: initialProgramId = "G400", sele
         }
 
         const levelMap: Record<1 | 2 | 3, Course[]> = { 1: [], 2: [], 3: [] };
-        list.forEach((c) => {
-            const level = (c.level ?? 1) as 1 | 2 | 3;
-            if (levelMap[level]) {
-                levelMap[level].push(c);
-            }
+
+        uniqueCourses.forEach((c) => {
+            // FIX #2: Parse string level representations safely to numbers
+            const parsedLevel = typeof c.level === "string" ? parseInt(c.level, 10) : Number(c.level);
+            const level = (parsedLevel >= 1 && parsedLevel <= 3 ? parsedLevel : 1) as 1 | 2 | 3;
+            levelMap[level].push(c);
         });
 
         const spacingX = 190;
@@ -173,15 +198,14 @@ export default function CourseFlow({ program_id: initialProgramId = "G400", sele
                 arr.forEach((course, i) => {
                     const x = offsetX + i * spacingX;
                     const y = yOffset[level] + (i % 2 === 0 ? -jitter : jitter);
+                    const codeStr = String(course.code).trim();
 
-                    nodePositions[course.code] = { x, y };
+                    nodePositions[codeStr] = { x, y };
 
                     outNodes.push({
-                        id: course.code,
+                        id: codeStr,
                         position: { x, y },
-                        data: { label: `${course.code}\n${course.title}` },
-                        sourcePosition: Position.Top,
-                        targetPosition: Position.Bottom,
+                        data: { label: `${codeStr}\n${course.title}` },
                         style: {
                             padding: 10,
                             borderRadius: 8,
@@ -195,7 +219,7 @@ export default function CourseFlow({ program_id: initialProgramId = "G400", sele
                 });
             });
 
-        const outEdges = buildDependencyEdges(list, nodePositions);
+        const outEdges = buildDependencyEdges(uniqueCourses, nodePositions);
         const result = { nodes: outNodes, edges: outEdges };
 
         layoutCache.set(key, result);
@@ -210,7 +234,7 @@ export default function CourseFlow({ program_id: initialProgramId = "G400", sele
         return result;
     }, []);
 
-    /* ---------------- DATA LOAD ---------------- */
+    /* ---------------- DATA LOAD (SUPABASE) ---------------- */
 
     useEffect(() => {
         let cancelled = false;
@@ -219,34 +243,52 @@ export default function CourseFlow({ program_id: initialProgramId = "G400", sele
             setLoading(true);
             setError({ hasError: false, message: "", type: "unknown" });
 
-            try {
-                // Case-insensitive program search to prevent "not found" errors
-                const targetCode = activeProgramId.trim().toUpperCase();
-                const program = programs.find(
-                    (p) => p.program_id?.toUpperCase() === targetCode
-                );
 
-                if (!program) {
+
+            setNodes([]);
+            setEdges([]);
+
+            try {
+                const targetCode = activeProgramId.trim().toUpperCase();
+                const tableName = `${targetCode.toUpperCase()}_courses`;
+
+                const { data: tableCourses, error: tableError } = await supabase
+                    .from(tableName)
+                    .select("*");
+
+                let programCourses = tableCourses ?? [];
+
+                if (tableError || programCourses.length === 0) {
+                    const { data: generalCourses, error: generalError } = await supabase
+                        .from("courses")
+                        .select("*")
+                        .contains("program_ids", [targetCode]);
+
+                    if (generalError) {
+                        throw new Error(generalError.message);
+                    }
+
+                    programCourses = generalCourses ?? [];
+
+                }
+
+                if (cancelled) return;
+
+                if (!programCourses || programCourses.length === 0) {
                     setError({
                         hasError: true,
-                        message: `Program "${activeProgramId}" not found. Available programs: ${programs
-                            .map((p) => p.program_id)
-                            .join(", ")}`,
+                        message: `No courses found in Supabase for program "${targetCode}".`,
                         type: "not_found",
                     });
                     setLoading(false);
                     return;
                 }
 
-                const programCourses: Course[] = courses.filter((c) =>
-                    program.courseCodes.includes(c.code)
-                );
+                const fetchedCourses = programCourses as Course[];
+                coursesRef.current = fetchedCourses;
 
-                if (cancelled) return;
+                const layout = calculateLayout(fetchedCourses, targetCode);
 
-                coursesRef.current = programCourses;
-
-                const layout = calculateLayout(programCourses, targetCode);
                 setNodes(layout.nodes);
                 setEdges(layout.edges);
                 setLoading(false);
@@ -255,8 +297,8 @@ export default function CourseFlow({ program_id: initialProgramId = "G400", sele
 
                 setError({
                     hasError: true,
-                    message: err instanceof Error ? err.message : "Unknown error",
-                    type: "unknown",
+                    message: err instanceof Error ? err.message : "Failed to load courses from Supabase",
+                    type: "network",
                 });
 
                 setLoading(false);
@@ -269,11 +311,9 @@ export default function CourseFlow({ program_id: initialProgramId = "G400", sele
         };
     }, [activeProgramId, calculateLayout, setNodes, setEdges]);
 
-
     /* ---------------- SELECTION ---------------- */
 
     useEffect(() => {
-        // Standardize to uppercase so URL route params like 'comp10001' match graph nodes like 'COMP10001'
         const targetCode = debouncedSelected ? debouncedSelected.toUpperCase() : null;
         setSelectedNodeId(targetCode);
     }, [debouncedSelected]);
@@ -323,7 +363,7 @@ export default function CourseFlow({ program_id: initialProgramId = "G400", sele
 
     /* ---------------- RENDER ---------------- */
 
-    const tabOptions = ["G400", "GG14"];
+    const tabOptions = ["G400", "GG14", "G100", "GN51"];
 
     return (
         <div className="w-full flex flex-col h-[90vh] bg-slate-50 border border-slate-200 rounded-xl overflow-hidden">
@@ -354,7 +394,7 @@ export default function CourseFlow({ program_id: initialProgramId = "G400", sele
             <div className="flex-1 w-full relative">
                 {loading && (
                     <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/75 text-sm font-medium text-slate-500">
-                        Loading dependency graph…
+                        Loading dependency graph from Supabase…
                     </div>
                 )}
 
@@ -376,7 +416,9 @@ export default function CourseFlow({ program_id: initialProgramId = "G400", sele
                             }
                         }}
                     >
+                        {/* FIX #3: Key prop forces re-centering view bounds on program tab change */}
                         <MemoizedReactFlow
+                            key={activeProgramId}
                             nodes={styledNodes}
                             edges={styledEdges}
                             onNodesChange={handleNodesChange}

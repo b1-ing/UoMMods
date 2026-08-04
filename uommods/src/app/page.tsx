@@ -32,14 +32,14 @@ export default function LandingPage() {
                     {/* CTA Buttons */}
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
                         <Link
-                            href="/course-list"
+                            href="/plannerv2"
                             className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 text-white font-semibold shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/35 hover:scale-[1.02] active:scale-[0.98] transition-all text-sm"
                         >
                             <span>Open Interactive Planner</span>
                             <ArrowRight size={16} />
                         </Link>
                         <Link
-                            href="/planner"
+                            href="/course-list"
                             className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-300 hover:text-white font-semibold transition-all text-sm"
                         >
                             Explore Course Modules

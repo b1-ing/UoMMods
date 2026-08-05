@@ -2,7 +2,18 @@
 
 import { courses } from "@/lib/courses";
 
-export default function AssessmentSplit({ courseCode }: { courseCode: string }) {
+interface AssessmentSplitProps {
+    courseCode: string;
+    assessmentData?: Record<string, number> | null; // 👈 Add this line
+}
+
+export default function AssessmentSplit({
+                                            courseCode,
+
+                                        }: AssessmentSplitProps) {
+    // Use assessmentData if present, or fallback to internal fetching logic
+    // ...
+
     // 1. Find the course locally
     const currentCourse = courses.find(c => c.code?.toUpperCase() === courseCode?.toUpperCase());
 

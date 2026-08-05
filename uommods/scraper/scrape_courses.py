@@ -18,7 +18,7 @@ load_dotenv(".env")
 
 BASE_PAGE = os.getenv(
     "BASE_PAGE",
-    "https://www.manchester.ac.uk/study/undergraduate/courses/2026/06246/bsc-information-technology-management-for-business",
+    "https://www.manchester.ac.uk/study/undergraduate/courses/2026/03389/beng-mechanical-engineering/",
 )
 
 HEADERS = {

@@ -363,7 +363,7 @@ export default function CourseFlow({ program_id: initialProgramId = "G400", sele
 
     /* ---------------- RENDER ---------------- */
 
-    const tabOptions = ["G400", "GG14", "G100", "GN51"];
+    const tabOptions = ["G400", "GG14", "G100", "GN51", "LN13", "H300"];
 
     return (
         <div className="w-full flex flex-col h-[90vh] bg-slate-50 border border-slate-200 rounded-xl overflow-hidden">

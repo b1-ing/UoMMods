@@ -1,19 +1,18 @@
 "use client";
 
-import { use } from "react";
+import { use, useState, useEffect } from "react";
 import Link from "next/link";
-import { ArrowLeft, BookOpen, Calendar, GraduationCap, Hash, AlertTriangle, Link2 } from "lucide-react";
+import { ArrowLeft, BookOpen, Calendar, GraduationCap, Hash, AlertTriangle, Link2, Loader2 } from "lucide-react";
 import CourseDependencyGraph from "@/app/components/CourseDependencyGraph";
 import GradeChart from "@/app/components/GradeChart";
 import HeaderBar from "@/app/components/HeaderBar";
 import AssessmentSplit from "@/app/components/AssessmentSplit";
 import RatingsSection from "@/app/components/RatingsSection";
 import { Toaster } from "@/components/ui/sonner";
-import { courses } from "@/lib/courses";
-import { programs } from "@/lib/programs";
+import { supabase } from "@/lib/supabase";
+import { Course, Program } from "@/lib/types";
 import { summaries } from "@/lib/summaries";
-import { Course } from "@/lib/types";
-import ProgramDependencyGraph from "@/app/components/ProgramDependencyGraph"
+import ProgramDependencyGraph from "@/app/components/ProgramDependencyGraph";
 
 const SEMESTER_THEME: Record<string, { label: string; color: string; bg: string }> = {
     "Full year":  { label: "Full Year",   color: "#6366f1", bg: "#6366f115" },
@@ -51,26 +50,38 @@ function SidebarSection({ title, children }: { title: string; children: React.Re
     );
 }
 
-function CourseChipList({ codes, emptyText }: { codes: string[]; emptyText: string }) {
-    if (!codes.length) return <p className="text-[13px] text-slate-400 italic">{emptyText}</p>;
+// Helper to safely normalize Postgres array / CSV strings into string[]
+function parseCourseList(raw: unknown): string[] {
+    if (!raw) return [];
+    if (Array.isArray(raw)) return raw.map(String).filter(Boolean);
+    if (typeof raw === "string") {
+        return raw
+            .replace(/[{}]/g, "")
+            .split(",")
+            .map((s) => s.trim().replace(/^"|"$/g, ""))
+            .filter(Boolean);
+    }
+    return [];
+}
+
+function CourseChipList({ codes, emptyText }: { codes: string[] | unknown; emptyText: string }) {
+    const parsedCodes = parseCourseList(codes);
+    if (!parsedCodes.length) return <p className="text-[13px] text-slate-400 italic">{emptyText}</p>;
+
     return (
         <div className="flex flex-col gap-1.5">
-            {codes.map((code) => {
-                const c = courses.find((x) => x.code === code);
-                return (
-                    <Link
-                        key={code}
-                        href={`/route/${code}`}
-                        className="flex items-center justify-between px-3 py-2 rounded-lg border border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm transition-all group"
-                    >
-                        <div className="min-w-0">
-                            <span className="text-[11px] font-mono font-bold text-slate-400">{code}</span>
-                            {c && <p className="text-[12px] text-slate-700 truncate leading-snug mt-0.5">{c.title}</p>}
-                        </div>
-                        <Link2 size={12} className="text-slate-300 group-hover:text-slate-500 flex-shrink-0 ml-2" />
-                    </Link>
-                );
-            })}
+            {parsedCodes.map((code) => (
+                <Link
+                    key={code}
+                    href={`/route/${code}`}
+                    className="flex items-center justify-between px-3 py-2 rounded-lg border border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm transition-all group"
+                >
+                    <div className="min-w-0">
+                        <span className="text-[11px] font-mono font-bold text-slate-700">{code}</span>
+                    </div>
+                    <Link2 size={12} className="text-slate-300 group-hover:text-slate-500 flex-shrink-0 ml-2" />
+                </Link>
+            ))}
         </div>
     );
 }
@@ -111,11 +122,97 @@ interface CourseDetailPageProps {
 export default function CourseDetailPage({ params }: CourseDetailPageProps) {
     const resolvedParams = use(params);
     const code = (resolvedParams.courseCode || "").toUpperCase();
-    const course: Course | undefined = courses.find((c) => c.code?.toUpperCase() === code);
+
+    const [course, setCourse] = useState<Course | null>(null);
+    const [offeringPrograms, setOfferingPrograms] = useState<Program[]>([]);
+    const [assessmentData, setAssessmentData] = useState<Record<string, number> | null>(null);
+    const [loading, setLoading] = useState(true);
+
     const summary = summaries.find((s) => s.code === code);
 
-    // Programs that include this course
-    const offeringPrograms = programs.filter((p) => p.courseCodes.includes(code));
+    useEffect(() => {
+        async function fetchCourseData() {
+            try {
+                setLoading(true);
+
+                // 1. Fetch target course from Supabase
+                const { data: courseData, error: courseError } = await supabase
+                    .from("courses")
+                    .select("*")
+                    .eq("code", code)
+                    .maybeSingle();
+
+                if (courseError) throw courseError;
+                setCourse(courseData as Course);
+
+                // 2. Fetch offering programs
+                const { data: programData } = await supabase
+                    .from("programs")
+                    .select("*");
+
+                let matchedPrograms: Program[] = [];
+                if (programData) {
+                    matchedPrograms = (programData as Program[]).filter((p) => {
+                        const allCodes = [
+                            ...(p.firstyrs1comp ?? []),
+                            ...(p.firstyrs2comp ?? []),
+                            ...(p.secondyrs1comp ?? []),
+                            ...(p.secondyrs2comp ?? []),
+                            ...(p.thirdyrs1comp ?? []),
+                            ...(p.thirdyrs2comp ?? []),
+                        ];
+                        return allCodes.includes(code);
+                    });
+                    setOfferingPrograms(matchedPrograms);
+                }
+
+                // 3. Determine program assessment table (e.g., "g400_assessments")
+                const primaryProgramId = matchedPrograms[0]?.program_id || courseData?.program_ids?.[0] || "g400";
+                const tableName = `${primaryProgramId.toLowerCase().replace(/[^a-z0-9_]/g, "")}_assessments`;
+
+                // 4. Fetch assessment breakdown from {program}_assessments table
+                let { data: rawAssessment } = await supabase
+                    .from(tableName)
+                    .select("*")
+                    .eq("code", code)
+                    .maybeSingle();
+
+                // Fallback check to generic table if primary program table fails
+                if (!rawAssessment) {
+                    const { data: fallbackAssessment } = await supabase
+                        .from("courses_assessments")
+                        .select("*")
+                        .eq("code", code)
+                        .maybeSingle();
+                    rawAssessment = fallbackAssessment;
+                }
+
+                if (rawAssessment) {
+                    setAssessmentData(rawAssessment);
+                }
+            } catch (err) {
+                console.error("Error fetching course detail from Supabase:", err);
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        if (code) {
+            fetchCourseData();
+        }
+    }, [code]);
+
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-slate-50">
+                <HeaderBar />
+                <div className="max-w-3xl mx-auto px-6 py-24 text-center space-y-3">
+                    <Loader2 size={36} className="animate-spin text-indigo-600 mx-auto" />
+                    <p className="text-sm font-medium text-slate-500">Loading course details...</p>
+                </div>
+            </div>
+        );
+    }
 
     if (!course) {
         return (
@@ -136,6 +233,9 @@ export default function CourseDetailPage({ params }: CourseDetailPageProps) {
     }
 
     const semTheme = SEMESTER_THEME[course.semester] ?? { color: "#64748b", bg: "#f1f5f9" };
+    const prereqs = parseCourseList(course.prerequisites_list);
+    const coreqs = parseCourseList(course.corequisites_list);
+    const reqBy = parseCourseList(course.required_by);
 
     return (
         <div className="min-h-screen bg-slate-50">
@@ -155,13 +255,13 @@ export default function CourseDetailPage({ params }: CourseDetailPageProps) {
                         <div className="min-w-0">
                             <div className="flex items-center gap-2 mb-1 flex-wrap">
                                 <span className="text-xs font-mono font-bold text-slate-400 tracking-widest">{course.code}</span>
-                                <SemesterBadge semester={course.semester} />
+                                {course.semester && <SemesterBadge semester={course.semester} />}
                             </div>
                             <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 leading-tight">{course.title}</h1>
                             <div className="flex flex-wrap gap-2 mt-3">
-                                <StatChip icon={<Hash size={13} />} label={`${course.credits} credits`} />
-                                <StatChip icon={<GraduationCap size={13} />} label={`Year ${course.level}`} />
-                                <StatChip icon={<Calendar size={13} />} label={course.semester} />
+                                <StatChip icon={<Hash size={13} />} label={`${course.credits ?? 0} credits`} />
+                                <StatChip icon={<GraduationCap size={13} />} label={`Year ${course.level ?? "N/A"}`} />
+                                <StatChip icon={<Calendar size={13} />} label={course.semester || "N/A"} />
                             </div>
                         </div>
 
@@ -193,9 +293,9 @@ export default function CourseDetailPage({ params }: CourseDetailPageProps) {
                             </SectionCard>
                         )}
 
-                        {/* Assessment breakdown */}
+                        {/* Dynamic Assessment breakdown */}
                         <SectionCard title="Assessment">
-                            <AssessmentSplit courseCode={course.code} />
+                            <AssessmentSplit courseCode={course.code} assessmentData={assessmentData} />
                         </SectionCard>
 
                         {/* Grade history */}
@@ -212,7 +312,7 @@ export default function CourseDetailPage({ params }: CourseDetailPageProps) {
 
                         <SectionCard title="Program Dependencies">
                             <ProgramDependencyGraph
-                                program_id={course.program_ids?.[0] || "G400"}
+                                program_id={offeringPrograms[0]?.program_id || course.program_ids?.[0] || "G400"}
                                 selectedcourseid={course.code}
                             />
                         </SectionCard>
@@ -266,22 +366,22 @@ export default function CourseDetailPage({ params }: CourseDetailPageProps) {
 
                         {/* Prerequisites */}
                         <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-5">
-                            {(course.prerequisites_list?.length ?? 0) > 0 && (
+                            {prereqs.length > 0 && (
                                 <SidebarSection title="Prerequisites">
-                                    <CourseChipList codes={course.prerequisites_list ?? []} emptyText="None" />
+                                    <CourseChipList codes={prereqs} emptyText="None" />
                                 </SidebarSection>
                             )}
-                            {(course.corequisites_list?.length ?? 0) > 0 && (
+                            {coreqs.length > 0 && (
                                 <SidebarSection title="Corequisites">
-                                    <CourseChipList codes={course.corequisites_list ?? []} emptyText="None" />
+                                    <CourseChipList codes={coreqs} emptyText="None" />
                                 </SidebarSection>
                             )}
-                            {(course.required_by?.length ?? 0) > 0 && (
+                            {reqBy.length > 0 && (
                                 <SidebarSection title="Required By">
-                                    <CourseChipList codes={course.required_by ?? []} emptyText="None" />
+                                    <CourseChipList codes={reqBy} emptyText="None" />
                                 </SidebarSection>
                             )}
-                            {!(course.prerequisites_list?.length) && !(course.corequisites_list?.length) && !(course.required_by?.length) && (
+                            {!prereqs.length && !coreqs.length && !reqBy.length && (
                                 <p className="text-[13px] text-slate-400 italic">No prerequisites or corequisites.</p>
                             )}
                         </div>

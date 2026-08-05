@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -16,24 +16,56 @@ import {
 } from "@/components/ui/select";
 import HeaderBar from "@/app/components/HeaderBar";
 import Fuse from "fuse.js";
-import { courses } from "@/lib/courses";
-import { Search, RotateCcw, BookOpen, Clock, Award, ArrowUpDown } from "lucide-react";
+import { supabase } from "@/lib/supabase"; // 👈 Ensure your Supabase client path is correct
+import { Course } from "@/lib/types"; // 👈 Ensure your Course interface path is correct
+import { Search, RotateCcw, BookOpen, Clock, Award, ArrowUpDown, Loader2 } from "lucide-react";
 
 export default function CourseListPage() {
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   const [search, setSearch] = useState("");
   const [yearFilter, setYearFilter] = useState("all");
   const [semesterFilter, setSemesterFilter] = useState("all");
   const [sortBy, setSortBy] = useState<"code" | "title" | "credits">("code");
 
-  // Memoize Fuse instance to prevent re-indexing on every render
+  // 1. Fetch courses directly from Supabase table 'courses'
+  useEffect(() => {
+    async function fetchCoursesFromSupabase() {
+      try {
+        setLoading(true);
+        const { data, error: fetchError } = await supabase
+            .from("courses")
+            .select("*");
+
+        if (fetchError) {
+          throw fetchError;
+        }
+
+        if (data) {
+          setCourses(data as Course[]);
+        }
+      } catch (err: unknown) {
+        console.error("Failed to fetch courses:", err);
+        setError("Failed to load courses from the database.");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchCoursesFromSupabase();
+  }, []);
+
+  // 2. Memoize Fuse instance based on fetched courses
   const fuse = useMemo(() => {
     return new Fuse(courses, {
       keys: ["title", "code", "description"],
       threshold: 0.35,
     });
-  }, []);
+  }, [courses]);
 
-  // Filter & Search Logic
+  // 3. Filter & Search Logic
   const filteredCourses = useMemo(() => {
     const searchResults =
         search.trim() === ""
@@ -60,11 +92,11 @@ export default function CourseListPage() {
             return a.item.title.localeCompare(b.item.title);
           }
           if (sortBy === "credits") {
-            return (b.item.credits || 0) - (a.item.credits || 0);
+            return (Number(b.item.credits) || 0) - (Number(a.item.credits) || 0);
           }
           return 0;
         });
-  }, [search, yearFilter, semesterFilter, sortBy, fuse]);
+  }, [search, yearFilter, semesterFilter, sortBy, fuse, courses]);
 
   const hasActiveFilters = search !== "" || yearFilter !== "all" || semesterFilter !== "all";
 
@@ -99,7 +131,6 @@ export default function CourseListPage() {
           <Card className="border border-slate-200 dark:border-slate-800 shadow-sm bg-card">
             <CardContent className="p-4 sm:p-6 space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-4 items-end">
-
                 {/* Search Bar */}
                 <div className="lg:col-span-5 space-y-1.5">
                   <Label htmlFor="search" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
@@ -189,8 +220,21 @@ export default function CourseListPage() {
             </CardContent>
           </Card>
 
-          {/* Course Cards Grid */}
-          {filteredCourses.length > 0 ? (
+          {/* Loading Spinner */}
+          {loading ? (
+              <div className="text-center py-24 bg-card rounded-2xl border border-dashed border-slate-300 dark:border-slate-800 space-y-3">
+                <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+                <p className="text-sm text-muted-foreground font-medium">Loading courses from database...</p>
+              </div>
+          ) : error ? (
+              <div className="text-center py-16 bg-card rounded-2xl border border-red-200 dark:border-red-900/50 space-y-3">
+                <p className="text-sm text-red-500 font-medium">{error}</p>
+                <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
+                  Retry
+                </Button>
+              </div>
+          ) : filteredCourses.length > 0 ? (
+              /* Course Cards Grid */
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                 {filteredCourses.map(({ item: course }) => (
                     <Link

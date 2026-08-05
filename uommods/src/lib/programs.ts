@@ -543,5 +543,91 @@ export const programs: Program[] = [
       "COMP37212",
       "MCEL30032"
     ]
-  }
+  },
+  {
+    "program_id": "LN13",
+    "title": "BAEcon Economics and Finance",
+    "courseCodes": [
+
+    ],
+    "firstyrfy": [
+      "COMP11120"
+    ],
+    "firstyrs1comp": [
+      "COMP12111",
+      "COMP15111",
+      "COMP16321"
+    ],
+    "firstyrs1op": [],
+    "firstyrs2comp": [
+
+    ],
+    "firstyrs2op": [],
+    "secondyrfy": [
+
+    ],
+    "secondyrs1comp": [
+    ],
+    "secondyrs1op": [
+    ],
+    "secondyrs2comp": [
+      "COMP23412"
+    ],
+    "secondyrs2op": [
+
+    ],
+    "thirdyrfy": [
+    ],
+    "thirdyrs1comp": [],
+    "thirdyrs1op": [
+
+    ],
+    "thirdyrs2comp": [],
+    "thirdyrs2op": [
+
+    ]
+  },
+  {
+    "program_id": "H300",
+    "title": "BEng Mechanical Engineering",
+    "courseCodes": [
+
+    ],
+    "firstyrfy": [
+      "COMP11120"
+    ],
+    "firstyrs1comp": [
+      "COMP12111",
+      "COMP15111",
+      "COMP16321"
+    ],
+    "firstyrs1op": [],
+    "firstyrs2comp": [
+
+    ],
+    "firstyrs2op": [],
+    "secondyrfy": [
+
+    ],
+    "secondyrs1comp": [
+    ],
+    "secondyrs1op": [
+    ],
+    "secondyrs2comp": [
+      "COMP23412"
+    ],
+    "secondyrs2op": [
+
+    ],
+    "thirdyrfy": [
+    ],
+    "thirdyrs1comp": [],
+    "thirdyrs1op": [
+
+    ],
+    "thirdyrs2comp": [],
+    "thirdyrs2op": [
+
+    ]
+  },
 ];

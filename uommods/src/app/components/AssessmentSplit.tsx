@@ -92,7 +92,7 @@ export default function AssessmentSplit({ courseCode, assessmentData }: Assessme
                             className="border p-3 rounded-xl shadow-sm flex justify-between items-center bg-white border-slate-200 hover:border-slate-300 transition-all"
                         >
                             <span className="font-medium text-slate-700 text-sm">{cleanName}</span>
-                            <span className="font-semibold text-indigo-600 text-sm">{percentage}%</span>
+                            <span className="font-semibold text-indigo-600 text-sm">{percentage * 100}%</span>
                         </li>
                     );
                 })}

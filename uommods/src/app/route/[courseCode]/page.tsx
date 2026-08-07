@@ -11,7 +11,6 @@ import RatingsSection from "@/app/components/RatingsSection";
 import { Toaster } from "@/components/ui/sonner";
 import { supabase } from "@/lib/supabase";
 import { Course, Program } from "@/lib/types";
-import { summaries } from "@/lib/summaries";
 import ProgramDependencyGraph from "@/app/components/ProgramDependencyGraph";
 
 const SEMESTER_THEME: Record<string, { label: string; color: string; bg: string }> = {
@@ -97,23 +96,23 @@ function SectionCard({ title, children }: { title: string; children: React.React
     );
 }
 
-function SummaryProCon({ summary }: { summary: { summary: string; take: string; donttake: string } }) {
-    return (
-        <SectionCard title="Overview">
-            <p className="text-sm text-slate-600 leading-relaxed">{summary.summary}</p>
-            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="rounded-xl bg-green-50 border border-green-200 p-4">
-                    <p className="text-[11px] font-bold uppercase tracking-wider text-green-600 mb-1.5">Why take it</p>
-                    <p className="text-sm text-green-900 leading-relaxed">{summary.take}</p>
-                </div>
-                <div className="rounded-xl bg-red-50 border border-red-200 p-4">
-                    <p className="text-[11px] font-bold uppercase tracking-wider text-red-500 mb-1.5">Why not</p>
-                    <p className="text-sm text-red-900 leading-relaxed">{summary.donttake}</p>
-                </div>
-            </div>
-        </SectionCard>
-    );
-}
+// function SummaryProCon({ summary }: { summary: { summary: string; take: string; donttake: string } }) {
+//     return (
+//         <SectionCard title="Overview">
+//             <p className="text-sm text-slate-600 leading-relaxed">{summary.summary}</p>
+//             <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+//                 <div className="rounded-xl bg-green-50 border border-green-200 p-4">
+//                     <p className="text-[11px] font-bold uppercase tracking-wider text-green-600 mb-1.5">Why take it</p>
+//                     <p className="text-sm text-green-900 leading-relaxed">{summary.take}</p>
+//                 </div>
+//                 <div className="rounded-xl bg-red-50 border border-red-200 p-4">
+//                     <p className="text-[11px] font-bold uppercase tracking-wider text-red-500 mb-1.5">Why not</p>
+//                     <p className="text-sm text-red-900 leading-relaxed">{summary.donttake}</p>
+//                 </div>
+//             </div>
+//         </SectionCard>
+//     );
+// }
 
 interface CourseDetailPageProps {
     params: Promise<{ courseCode: string }>;
@@ -128,7 +127,7 @@ export default function CourseDetailPage({ params }: CourseDetailPageProps) {
     const [assessmentData, setAssessmentData] = useState<Record<string, number> | null>(null);
     const [loading, setLoading] = useState(true);
 
-    const summary = summaries.find((s) => s.code === code);
+    // const summary = summaries.find((s) => s.code === code);
 
     useEffect(() => {
         async function fetchCourseData() {
@@ -284,12 +283,12 @@ export default function CourseDetailPage({ params }: CourseDetailPageProps) {
                     <div className="flex-1 min-w-0 space-y-6">
 
                         {/* AI summary */}
-                        {summary && <SummaryProCon summary={summary} />}
+
 
                         {/* Course aims */}
-                        {course.aims && (
+                        {course.description && (
                             <SectionCard title="Course Aims">
-                                <p className="text-sm text-slate-600 leading-relaxed">{course.aims}</p>
+                                <p className="text-sm text-slate-600 leading-relaxed">{course.description}</p>
                             </SectionCard>
                         )}
 
